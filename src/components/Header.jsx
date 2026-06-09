@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Bell, Search, User, LogOut, Settings as SettingsIcon } from 'lucide-react'
+import { Bell, LogOut, Settings as SettingsIcon } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ProfileModal from './ProfileModal'
@@ -49,16 +49,6 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Search */}
-        <div className="relative hidden md:block">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar ativos..."
-            className="pl-9 pr-4 py-2 text-sm bg-slate-100 rounded-lg border border-transparent focus:outline-none focus:border-blue-300 focus:bg-white transition-colors w-56"
-          />
-        </div>
-
         {/* Notifications */}
         <button className="relative p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors">
           <Bell size={18} />

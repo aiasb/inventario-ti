@@ -67,7 +67,7 @@ function SortIcon({ field, sortField, sortDir }) {
 
 export default function Assets() {
   const { assets, deleteAsset } = useAssets()
-  const { categorias, setores, situacoes } = useMasterData()
+  const { categorias, setores, situacoes, periodosManutencao } = useMasterData()
   const { profile } = useAuth()
   const canEdit = profile?.role === 'admin' || profile?.role === 'user'
   const [search, setSearch] = useState('')
@@ -154,27 +154,35 @@ export default function Assets() {
   }
 
   function exportCSVCompleto() {
+    // Apenas tipos periódicos viram colunas (ex: Limpeza, Formatação)
+    const periodos = periodosManutencao.items.filter(p => p.periodico && p.dias)
+
     const headers = [
       'Hostname', 'Serial', 'Categoria', 'Marca', 'Modelo', 'Status', 'Setor', 'Responsável',
       'Memória', 'Armazenamento', 'Data Compra', 'Garantia', 'Observações',
-      'Tipo Manutenção', 'Data Manutenção', 'Analista', 'Custo (R$)', 'Status Manutenção', 'Resolução', 'Descrição Manutenção',
+      ...periodos.map(p => `Última ${p.tipo}`),
     ]
-    const rows = []
-    for (const a of filtered) {
-      const cat = categorias.items.find(c => c.id === a.category)?.label || a.category
+
+    const rows = filtered.map(a => {
+      const cat  = categorias.items.find(c => c.id === a.category)?.label || a.category
       const stat = situacoes.items.find(s => s.id === a.status)?.nome || a.status
-      const assetCols = [
+
+      // Para cada tipo periódico, busca a data da última manutenção
+      const manutCols = periodos.map(p => {
+        const last = (a.maintenances ?? [])
+          .filter(m => m.type === p.tipo && m.date)
+          .sort((x, y) => y.date.localeCompare(x.date))[0]
+        return last ? fmtDate(last.date) : ''
+      })
+
+      return [
         a.name, a.serialNumber, cat, a.brand, a.model, stat, a.department, a.assignedTo,
-        a.memory, a.storage, a.purchaseDate, a.warrantyExpiry, (a.notes || '').replace(/\n/g, ' '),
+        a.memory, a.storage, fmtDate(a.purchaseDate), fmtDate(a.warrantyExpiry),
+        (a.notes || '').replace(/\n/g, ' '),
+        ...manutCols,
       ]
-      if (a.maintenances?.length > 0) {
-        for (const m of a.maintenances) {
-          rows.push([...assetCols, m.type, m.date, m.analyst, m.cost, m.status, m.resolution, (m.description || '').replace(/\n/g, ' ')])
-        }
-      } else {
-        rows.push([...assetCols, '', '', '', '', '', '', ''])
-      }
-    }
+    })
+
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',')),
