@@ -3,15 +3,7 @@
  * Cada função retorna { data, error } ou lança exceção se necessário.
  */
 import { supabase } from './supabase'
-import {
-  initialResponsaveis,
-  initialSetores,
-  initialCategorias,
-  initialMarcas,
-  initialSituacoes,
-  initialAnalistas,
-  initialAssets,
-} from '../data/mockData'
+import { initialCategorias, initialSituacoes } from '../data/mockData'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -325,13 +317,10 @@ export async function resetData({ assets = true, masterData = false } = {}) {
 // Popula o banco com dados mock se as tabelas estiverem vazias.
 
 export async function seedIfEmpty() {
+  // Seed apenas dados estruturais necessários para os formulários funcionarem
   const seeds = [
     { table: 'situacoes', data: initialSituacoes.map(({ id, nome, descricao, cor }) => ({ id, nome, descricao, cor })) },
     { table: 'categorias', data: initialCategorias.map(({ id, label, icon, color, descricao }) => ({ id, label, icon, color, descricao })) },
-    { table: 'setores', data: initialSetores.map(({ nome, descricao, responsavel, ramal }) => ({ nome, descricao, responsavel, ramal })) },
-    { table: 'responsaveis', data: initialResponsaveis.map(({ nome, cargo, email, telefone, setor }) => ({ nome, cargo, email, telefone, setor })) },
-    { table: 'marcas', data: initialMarcas.map(({ nome, segmento, site, observacoes }) => ({ nome, segmento, site, observacoes })) },
-    { table: 'analistas', data: initialAnalistas.map(({ nome, matricula }) => ({ nome, matricula })) },
   ]
 
   for (const { table, data } of seeds) {
@@ -339,15 +328,5 @@ export async function seedIfEmpty() {
     if (count === 0) {
       await supabase.from(table).insert(data)
     }
-  }
-
-  // Seed de ativos (depende de situacoes e categorias existirem)
-  const { count: ativosCount } = await supabase
-    .from('ativos')
-    .select('*', { count: 'exact', head: true })
-
-  if (ativosCount === 0) {
-    const ativosToInsert = initialAssets.map(a => assetToDb(a))
-    await supabase.from('ativos').insert(ativosToInsert)
   }
 }
