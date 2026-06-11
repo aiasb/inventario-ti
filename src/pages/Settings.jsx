@@ -1,16 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Users, Shield, Mail, Edit2, Loader2, Search, X, Save, AlertCircle, CheckCircle2, Lock, Database, Trash2, ImageIcon, Monitor, RotateCcw, Paintbrush, BellRing, ShieldOff, Wrench, Clock } from 'lucide-react'
+import { Users, Shield, Mail, Edit2, Loader2, Search, X, Save, AlertCircle, CheckCircle2, Lock, Database, Trash2, ImageIcon, Monitor, RotateCcw, Paintbrush, BellRing, ShieldOff, Wrench, Clock, TriangleAlert } from 'lucide-react'
 import CadastrosBase from './Cadastros'
 import { useBranding, DEFAULTS } from '../context/BrandingContext'
 import { useAlerts } from '../context/AlertsContext'
 import { usePlatform } from '../hooks/usePlatform'
+import { resetData } from '../lib/api'
+import { clearAllCache } from '../lib/offlineDB'
 
 const TABS = [
-  { id: 'usuarios',  icon: Users,      label: 'Usuários e Acessos', shortLabel: 'Usuários' },
-  { id: 'cadastros', icon: Database,   label: 'Cadastros Base',     shortLabel: 'Cadastros' },
-  { id: 'aparencia', icon: Paintbrush, label: 'Aparência',          shortLabel: 'Aparência' },
-  { id: 'alertas',   icon: BellRing,   label: 'Alertas',            shortLabel: 'Alertas' },
+  { id: 'usuarios',  icon: Users,         label: 'Usuários e Acessos', shortLabel: 'Usuários' },
+  { id: 'cadastros', icon: Database,      label: 'Cadastros Base',     shortLabel: 'Cadastros' },
+  { id: 'aparencia', icon: Paintbrush,    label: 'Aparência',          shortLabel: 'Aparência' },
+  { id: 'alertas',   icon: BellRing,      label: 'Alertas',            shortLabel: 'Alertas' },
+  { id: 'sistema',   icon: TriangleAlert, label: 'Sistema',            shortLabel: 'Sistema' },
 ]
 
 const PRESET_COLORS = [
@@ -645,6 +648,57 @@ export default function Settings() {
     }
   }
 
+  // Reset system state
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetConfirm, setResetConfirm] = useState('')
+  const [isResetting, setIsResetting] = useState(false)
+  const [resetOptions, setResetOptions] = useState({ assets: true, masterData: false, users: false })
+  const [resetLog, setResetLog] = useState([])
+
+  async function handleResetSystem() {
+    setIsResetting(true)
+    setResetLog([])
+    const log = []
+    try {
+      if (resetOptions.assets) {
+        log.push('Excluindo ativos e manutenções...')
+        setResetLog([...log])
+        await resetData({ assets: true, masterData: false })
+        log.push('✓ Ativos e manutenções excluídos')
+        setResetLog([...log])
+      }
+      if (resetOptions.masterData) {
+        log.push('Excluindo dados mestres...')
+        setResetLog([...log])
+        await resetData({ assets: false, masterData: true })
+        log.push('✓ Dados mestres excluídos')
+        setResetLog([...log])
+      }
+      if (resetOptions.users) {
+        log.push('Excluindo usuários...')
+        setResetLog([...log])
+        const others = users.filter(u => u.id !== currentUserProfile?.id)
+        for (const u of others) {
+          await deleteUser(u.id)
+        }
+        log.push(`✓ ${others.length} usuário(s) excluído(s)`)
+        setResetLog([...log])
+      }
+      log.push('Limpando cache local...')
+      setResetLog([...log])
+      await clearAllCache()
+      log.push('✓ Cache limpo')
+      setResetLog([...log])
+      log.push('Concluído! Recarregando...')
+      setResetLog([...log])
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (err) {
+      log.push(`Erro: ${err.message}`)
+      setResetLog([...log])
+      setIsResetting(false)
+    }
+  }
+
   const filteredUsers = users.filter(u => {
     if (!search) return true
     const q = search.toLowerCase()
@@ -1008,6 +1062,97 @@ export default function Settings() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* ── Sistema ─────────────────────────────────────────────────────── */}
+      {activeTab === 'sistema' && (
+        <div className="space-y-4">
+          {!isAdmin ? (
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-xl">
+              <Lock size={14} /> Apenas administradores podem acessar esta área.
+            </div>
+          ) : (
+            <>
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-4">
+                <div className="flex items-start gap-3">
+                  <TriangleAlert size={20} className="text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-red-700">Zona de perigo — Limpar Sistema</p>
+                    <p className="text-xs text-red-500 mt-0.5">
+                      Esta ação é irreversível. Os dados serão excluídos permanentemente do banco de dados.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    { key: 'assets',     label: 'Ativos e manutenções',          desc: 'Remove todos os ativos cadastrados e histórico de manutenções' },
+                    { key: 'masterData', label: 'Dados mestres',                  desc: 'Categorias, setores, responsáveis, marcas, analistas, situações, períodos' },
+                    { key: 'users',      label: 'Usuários (exceto você)',          desc: 'Remove todas as contas de acesso exceto a sua própria' },
+                  ].map(({ key, label, desc }) => (
+                    <label key={key} className="flex items-start gap-3 p-3 bg-white border border-red-100 rounded-xl cursor-pointer hover:bg-red-50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={resetOptions[key]}
+                        onChange={e => setResetOptions(prev => ({ ...prev, [key]: e.target.checked }))}
+                        className="mt-0.5 accent-red-500"
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">{label}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                {!Object.values(resetOptions).some(Boolean) && (
+                  <p className="text-xs text-slate-400 text-center">Selecione ao menos uma opção acima.</p>
+                )}
+              </div>
+
+              {/* Confirmation area */}
+              {Object.values(resetOptions).some(Boolean) && !isResetting && resetLog.length === 0 && (
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+                  <p className="text-sm text-slate-600">
+                    Para confirmar, digite <span className="font-bold text-red-600">LIMPAR</span> no campo abaixo:
+                  </p>
+                  <input
+                    type="text"
+                    value={resetConfirm}
+                    onChange={e => setResetConfirm(e.target.value)}
+                    placeholder="Digite LIMPAR"
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-red-400 transition-colors"
+                    autoComplete="off"
+                  />
+                  <button
+                    onClick={handleResetSystem}
+                    disabled={resetConfirm !== 'LIMPAR'}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-semibold rounded-xl transition-colors"
+                  >
+                    <Trash2 size={15} />
+                    Confirmar exclusão
+                  </button>
+                </div>
+              )}
+
+              {/* Progress log */}
+              {(isResetting || resetLog.length > 0) && (
+                <div className="bg-slate-900 rounded-2xl p-4 space-y-1 font-mono text-xs">
+                  {resetLog.map((line, i) => (
+                    <p key={i} className={line.startsWith('✓') ? 'text-emerald-400' : line.startsWith('Erro') ? 'text-red-400' : 'text-slate-300'}>
+                      {line}
+                    </p>
+                  ))}
+                  {isResetting && (
+                    <p className="text-blue-400 flex items-center gap-1.5">
+                      <Loader2 size={11} className="animate-spin" /> aguardando...
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 

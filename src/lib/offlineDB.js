@@ -75,3 +75,15 @@ export async function queueSize() {
   const db = await idb()
   return db.count('sync_queue')
 }
+
+export async function clearAllCache() {
+  const db = await idb()
+  const stores = [
+    'assets', 'responsaveis', 'setores', 'categorias',
+    'marcas', 'situacoes', 'analistas', 'periodos_manutencao',
+    'sync_queue', 'meta',
+  ]
+  const tx = db.transaction(stores, 'readwrite')
+  await Promise.all(stores.map(s => tx.objectStore(s).clear()))
+  await tx.done
+}

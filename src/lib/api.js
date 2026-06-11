@@ -303,6 +303,24 @@ export async function fetchReportData({ category = null, status = null, departme
   return data
 }
 
+// ─── RESET SISTEMA ───────────────────────────────────────────────────────────
+
+export async function resetData({ assets = true, masterData = false } = {}) {
+  if (assets) {
+    const { error: e1 } = await supabase.from('manutencoes').delete().not('id', 'is', null)
+    handleError(e1, 'resetData:manutencoes')
+    const { error: e2 } = await supabase.from('ativos').delete().not('id', 'is', null)
+    handleError(e2, 'resetData:ativos')
+  }
+  if (masterData) {
+    const tables = ['periodos_manutencao', 'responsaveis', 'setores', 'categorias', 'marcas', 'situacoes', 'analistas']
+    for (const table of tables) {
+      const { error } = await supabase.from(table).delete().not('id', 'is', null)
+      handleError(error, `resetData:${table}`)
+    }
+  }
+}
+
 // ─── SEED INICIAL ─────────────────────────────────────────────────────────────
 // Popula o banco com dados mock se as tabelas estiverem vazias.
 
