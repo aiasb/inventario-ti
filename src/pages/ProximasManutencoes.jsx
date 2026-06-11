@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
-import { useAssets } from '../context/AssetsContext'
+import { useEffect, useMemo, useState } from 'react'
 import { useMasterData } from '../context/MasterDataContext'
+import { fetchProximasManutencoes } from '../lib/api'
 import {
   Wrench, AlertTriangle, Clock, CheckCircle2, Search,
-  CalendarX, CalendarCheck, Settings, ChevronRight,
+  CalendarX, CalendarCheck, Settings, ChevronRight, RefreshCw,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
@@ -16,26 +16,6 @@ function fmtDate(dateStr) {
   const part = dateStr.split('T')[0]
   const [y, m, d] = part.split('-')
   return `${d}/${m}/${y}`
-}
-
-function addDays(dateStr, days) {
-  const d = new Date(dateStr + 'T12:00:00')
-  d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]
-}
-
-function diffDays(from, to) {
-  const a = new Date(from + 'T12:00:00')
-  const b = new Date(to + 'T12:00:00')
-  return Math.round((b - a) / 86400000)
-}
-
-function getStatus(lastDate, nextDue, daysLeft) {
-  if (!lastDate) return 'nunca'
-  if (daysLeft < 0) return 'vencido'
-  if (daysLeft <= 30) return 'urgente'
-  if (daysLeft <= 90) return 'atencao'
-  return 'ok'
 }
 
 const STATUS_ORDER = { nunca: 0, vencido: 1, urgente: 2, atencao: 3, ok: 4 }
@@ -68,54 +48,28 @@ function KpiCard({ label, value, icon: Icon, color, sub, onClick, active }) {
 }
 
 export default function ProximasManutencoes() {
-  const { assets } = useAssets()
   const { periodosManutencao } = useMasterData()
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('todos')
   const [filterTipo, setFilterTipo] = useState('todos')
 
-  const today = new Date().toISOString().split('T')[0]
-
-  const rows = useMemo(() => {
-    const result = []
-
-    for (const periodo of periodosManutencao.items) {
-      if (!periodo.periodico || !periodo.dias) continue   // só períodos ativos
-
-      for (const asset of assets) {
-        const maintsOfType = (asset.maintenances ?? [])
-          .filter(m => m.type === periodo.tipo && m.date)
-          .sort((a, b) => b.date.localeCompare(a.date))
-
-        const lastMaint = maintsOfType[0] ?? null
-        const lastDate  = lastMaint?.date?.split('T')[0] ?? null
-        const nextDue   = lastDate ? addDays(lastDate, periodo.dias) : null
-        const daysLeft  = nextDue ? diffDays(today, nextDue) : null
-        const status    = getStatus(lastDate, nextDue, daysLeft)
-
-        result.push({
-          assetId:     asset.id,
-          assetName:   asset.name,
-          assetCategory: asset.category,
-          periodoId:   periodo.id,
-          periodoTipo: periodo.tipo,
-          dias:        periodo.dias,
-          lastDate,
-          nextDue,
-          daysLeft,
-          status,
+  function loadData() {
+    setLoading(true)
+    fetchProximasManutencoes()
+      .then(data => {
+        const sorted = [...data].sort((a, b) => {
+          const so = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
+          if (so !== 0) return so
+          return (a.daysLeft ?? -99999) - (b.daysLeft ?? -99999)
         })
-      }
-    }
+        setRows(sorted)
+      })
+      .finally(() => setLoading(false))
+  }
 
-    result.sort((a, b) => {
-      const so = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
-      if (so !== 0) return so
-      return (a.daysLeft ?? -99999) - (b.daysLeft ?? -99999)
-    })
-
-    return result
-  }, [assets, periodosManutencao.items, today])
+  useEffect(() => { loadData() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = useMemo(() => ({
     vencidos: rows.filter(r => r.status === 'vencido' || r.status === 'nunca').length,
@@ -139,7 +93,7 @@ export default function ProximasManutencoes() {
       normalize(r.assetName).includes(q) ||
       normalize(r.periodoTipo).includes(q)
     const matchStatus =
-      filterStatus === 'todos'        ? true :
+      filterStatus === 'todos'         ? true :
       filterStatus === 'vencido_nunca' ? (r.status === 'vencido' || r.status === 'nunca') :
       r.status === filterStatus
     const matchTipo = filterTipo === 'todos' || r.periodoId === filterTipo
@@ -147,7 +101,7 @@ export default function ProximasManutencoes() {
   })
 
   // Empty state when no periods configured
-  if (periodosManutencao.items.length === 0) {
+  if (!loading && periodosManutencao.items.filter(p => p.periodico && p.dias).length === 0) {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center">
         <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
@@ -173,16 +127,26 @@ export default function ProximasManutencoes() {
     <div className="p-6 space-y-6">
 
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-          <Wrench size={20} className="text-amber-500" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+            <Wrench size={20} className="text-amber-500" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">Próximas Manutenções</h2>
+            <p className="text-sm text-slate-500">
+              Calendário preventivo baseado nos períodos configurados e no histórico de cada ativo
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">Próximas Manutenções</h2>
-          <p className="text-sm text-slate-500">
-            Calendário preventivo baseado nos períodos configurados e no histórico de cada ativo
-          </p>
-        </div>
+        <button
+          onClick={loadData}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          Atualizar
+        </button>
       </div>
 
       {/* KPI Cards */}
@@ -266,106 +230,115 @@ export default function ProximasManutencoes() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/60">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Ativo</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Tipo de Manutenção</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Última Realizada</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Periodicidade</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Próxima Prevista</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Situação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-12 text-slate-400">
-                    Nenhum registro encontrado
-                  </td>
+        {loading ? (
+          <div className="py-16 flex flex-col items-center gap-3 text-slate-400">
+            <RefreshCw size={22} className="animate-spin" />
+            <p className="text-sm">Calculando manutenções...</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Ativo</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Tipo de Manutenção</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Última Realizada</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Periodicidade</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Próxima Prevista</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Situação</th>
                 </tr>
-              ) : filtered.map((row, i) => {
-                const badge = STATUS_BADGE[row.status]
-                const rowBg = row.status === 'vencido' ? 'bg-red-50/40' :
-                              row.status === 'nunca'   ? 'bg-slate-50/60' :
-                              row.status === 'urgente' ? 'bg-orange-50/30' : ''
-
-                return (
-                  <tr
-                    key={`${row.assetId}-${row.periodoId}`}
-                    className={`border-b border-slate-50 hover:bg-slate-50/60 transition-colors ${rowBg}`}
-                  >
-                    {/* Ativo */}
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-slate-800">{row.assetName}</p>
-                      {row.assetCategory && (
-                        <p className="text-xs text-slate-400 capitalize mt-0.5">{row.assetCategory}</p>
-                      )}
-                    </td>
-
-                    {/* Tipo */}
-                    <td className="px-4 py-3 text-slate-600">{row.periodoTipo}</td>
-
-                    {/* Última */}
-                    <td className="px-4 py-3">
-                      {row.lastDate ? (
-                        <span className="flex items-center gap-1.5 text-slate-600">
-                          <CalendarCheck size={13} className="text-slate-400" />
-                          {fmtDate(row.lastDate)}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 italic text-xs">Nunca realizado</span>
-                      )}
-                    </td>
-
-                    {/* Periodicidade */}
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                        {row.dias} dias
-                      </span>
-                    </td>
-
-                    {/* Próxima */}
-                    <td className="px-4 py-3">
-                      {row.nextDue ? (
-                        <span className={`text-sm font-medium ${
-                          row.status === 'vencido' ? 'text-red-600' :
-                          row.status === 'urgente' ? 'text-orange-600' :
-                          row.status === 'atencao' ? 'text-amber-600' :
-                          'text-slate-600'
-                        }`}>
-                          {fmtDate(row.nextDue)}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 italic text-xs">—</span>
-                      )}
-                    </td>
-
-                    {/* Situação */}
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border w-fit ${badge.cls}`}>
-                          {badge.label}
-                        </span>
-                        {row.daysLeft !== null && (
-                          <span className="text-xs text-slate-400 pl-1">
-                            {row.daysLeft < 0
-                              ? `${Math.abs(row.daysLeft)} dias em atraso`
-                              : `${row.daysLeft} dias restantes`}
-                          </span>
-                        )}
-                      </div>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-12 text-slate-400">
+                      Nenhum registro encontrado
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/40">
-          <p className="text-xs text-slate-400">{filtered.length} de {rows.length} registros</p>
-        </div>
+                ) : filtered.map((row) => {
+                  const badge = STATUS_BADGE[row.status]
+                  const rowBg = row.status === 'vencido' ? 'bg-red-50/40' :
+                                row.status === 'nunca'   ? 'bg-slate-50/60' :
+                                row.status === 'urgente' ? 'bg-orange-50/30' : ''
+
+                  return (
+                    <tr
+                      key={`${row.assetId}-${row.periodoId}`}
+                      className={`border-b border-slate-50 hover:bg-slate-50/60 transition-colors ${rowBg}`}
+                    >
+                      {/* Ativo */}
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-slate-800">{row.assetName}</p>
+                        {row.assetCategory && (
+                          <p className="text-xs text-slate-400 capitalize mt-0.5">{row.assetCategory}</p>
+                        )}
+                      </td>
+
+                      {/* Tipo */}
+                      <td className="px-4 py-3 text-slate-600">{row.periodoTipo}</td>
+
+                      {/* Última */}
+                      <td className="px-4 py-3">
+                        {row.lastDate ? (
+                          <span className="flex items-center gap-1.5 text-slate-600">
+                            <CalendarCheck size={13} className="text-slate-400" />
+                            {fmtDate(row.lastDate)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic text-xs">Nunca realizado</span>
+                        )}
+                      </td>
+
+                      {/* Periodicidade */}
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                          {row.dias} dias
+                        </span>
+                      </td>
+
+                      {/* Próxima */}
+                      <td className="px-4 py-3">
+                        {row.nextDue ? (
+                          <span className={`text-sm font-medium ${
+                            row.status === 'vencido' ? 'text-red-600' :
+                            row.status === 'urgente' ? 'text-orange-600' :
+                            row.status === 'atencao' ? 'text-amber-600' :
+                            'text-slate-600'
+                          }`}>
+                            {fmtDate(row.nextDue)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* Situação */}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-0.5">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border w-fit ${badge.cls}`}>
+                            {badge.label}
+                          </span>
+                          {row.daysLeft !== null && (
+                            <span className="text-xs text-slate-400 pl-1">
+                              {row.daysLeft < 0
+                                ? `${Math.abs(row.daysLeft)} dias em atraso`
+                                : `${row.daysLeft} dias restantes`}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!loading && (
+          <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/40">
+            <p className="text-xs text-slate-400">{filtered.length} de {rows.length} registros</p>
+          </div>
+        )}
       </div>
 
     </div>

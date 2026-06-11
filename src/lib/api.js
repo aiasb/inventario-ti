@@ -23,7 +23,7 @@ function handleError(error, context) {
 }
 
 // Converte camelCase do app → snake_case do banco para ativos
-function assetToDb(asset) {
+export function assetToDb(asset) {
   return {
     name: asset.name,
     category: asset.category || null,
@@ -43,7 +43,7 @@ function assetToDb(asset) {
 }
 
 // Converte snake_case do banco → camelCase do app para ativos
-function dbToAsset(row) {
+export function dbToAsset(row) {
   return {
     id: row.id,
     name: row.name,
@@ -64,8 +64,24 @@ function dbToAsset(row) {
   }
 }
 
+// Converte manutenção app → banco para fila offline
+export function maintenanceToDb(assetId, maintenance) {
+  return {
+    ativo_id: assetId,
+    type: maintenance.type || null,
+    description: maintenance.description || null,
+    analyst: maintenance.analyst || null,
+    date: maintenance.date || null,
+    cost: maintenance.cost || null,
+    status: maintenance.status || null,
+    resolution: maintenance.resolution || null,
+    upgrade_from: maintenance.upgradeFrom || null,
+    upgrade_to: maintenance.upgradeTo || null,
+  }
+}
+
 // Converte manutenção do banco → app
-function dbToMaintenance(row) {
+export function dbToMaintenance(row) {
   return {
     id: row.id,
     type: row.type,
@@ -252,6 +268,39 @@ export const periodosManutencaoApi = {
   insert: (row) => insertRow('periodos_manutencao', { ...row, dias: Number(row.dias) }),
   update: (id, patch) => updateRow('periodos_manutencao', id, { ...patch, dias: Number(patch.dias) }),
   delete: (id) => deleteRow('periodos_manutencao', id),
+}
+
+// ─── PRÓXIMAS MANUTENÇÕES (VIEW) ─────────────────────────────────────────────
+
+export async function fetchProximasManutencoes() {
+  const { data, error } = await supabase
+    .from('proximas_manutencoes')
+    .select('*')
+  handleError(error, 'fetchProximasManutencoes')
+  return (data ?? []).map(r => ({
+    assetId:       r.ativo_id,
+    assetName:     r.ativo_nome,
+    assetCategory: r.ativo_categoria,
+    periodoId:     r.periodo_id,
+    periodoTipo:   r.periodo_tipo,
+    dias:          r.dias,
+    lastDate:      r.ultima_data,
+    nextDue:       r.proxima_prevista,
+    status:        r.status,
+    daysLeft:      r.dias_restantes,
+  }))
+}
+
+// ─── RELATÓRIOS (RPC) ────────────────────────────────────────────────────────
+
+export async function fetchReportData({ category = null, status = null, department = null } = {}) {
+  const { data, error } = await supabase.rpc('get_report_data', {
+    p_category: category || null,
+    p_status:   status   || null,
+    p_dept:     department || null,
+  })
+  handleError(error, 'fetchReportData')
+  return data
 }
 
 // ─── SEED INICIAL ─────────────────────────────────────────────────────────────

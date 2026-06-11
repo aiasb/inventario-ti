@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Inventário TI</string>
+    <string name="title_activity_main">Inventário TI</string>
+    <string name="package_name">com.inventariocacu.app</string>
+    <string name="custom_url_scheme">com.inventariocacu.app</string>
+</resources>

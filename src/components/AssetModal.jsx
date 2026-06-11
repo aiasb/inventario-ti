@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   X, Edit2, Trash2, Calendar, MapPin, Tag, User, Building2,
-  MemoryStick, HardDrive, Wrench, Plus, Save, ArrowRight,
+  MemoryStick, HardDrive, Wrench, Plus, Save, ArrowRight, Ban,
 } from 'lucide-react'
 import { useMasterData } from '../context/MasterDataContext'
 import { useAssets } from '../context/AssetsContext'
@@ -163,11 +163,13 @@ export default function AssetModal({ asset: assetProp, onClose, onEdit }) {
   const { assets, deleteAsset } = useAssets()
   const { profile } = useAuth()
   const canEdit = profile?.role === 'admin' || profile?.role === 'user'
+  const isAdmin = profile?.role === 'admin'
   const [tab, setTab] = useState('info')
   const [showMaintenanceForm, setShowMaintenanceForm] = useState(false)
 
   // Always read the latest version of the asset from context
   const asset = assets.find(a => a.id === assetProp.id) ?? assetProp
+  const isDescartado = asset.status === 'descartado'
 
   const status = situacoes.items.find(s => s.id === asset.status)
   const category = categorias.items.find(c => c.id === asset.category)
@@ -203,7 +205,7 @@ export default function AssetModal({ asset: assetProp, onClose, onEdit }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {canEdit && (
+            {canEdit && !isDescartado && (
               <button
                 onClick={onEdit}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
@@ -212,7 +214,7 @@ export default function AssetModal({ asset: assetProp, onClose, onEdit }) {
                 Editar
               </button>
             )}
-            {canEdit && (
+            {isAdmin && (
               <button
                 onClick={handleDelete}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
@@ -247,6 +249,14 @@ export default function AssetModal({ asset: assetProp, onClose, onEdit }) {
             </span>
           )}
         </div>
+
+        {/* Banner descartado */}
+        {isDescartado && (
+          <div className="mx-6 mt-3 flex items-center gap-2.5 px-4 py-3 bg-zinc-100 border border-zinc-300 rounded-xl text-zinc-600 text-sm font-medium">
+            <Ban size={16} className="shrink-0 text-zinc-500" />
+            Este ativo foi descartado e não pode receber intervenções. Apenas administradores podem excluir o registro.
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 px-6 pt-3 border-b border-slate-100 shrink-0">
@@ -311,7 +321,7 @@ export default function AssetModal({ asset: assetProp, onClose, onEdit }) {
           {tab === 'maintenance' && (
             <div className="p-6 space-y-4">
               {/* Add button */}
-              {canEdit && !showMaintenanceForm && (
+              {canEdit && !isDescartado && !showMaintenanceForm && (
                 <button
                   onClick={() => setShowMaintenanceForm(true)}
                   className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-xl transition-colors"

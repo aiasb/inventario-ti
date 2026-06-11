@@ -3,12 +3,15 @@ import { useAssets } from '../context/AssetsContext'
 import { useMasterData } from '../context/MasterDataContext'
 import { useAuth } from '../context/AuthContext'
 import { resolveIcon } from '../utils/categoryIcons'
+import { useLocation } from 'react-router-dom'
+import { usePlatform } from '../hooks/usePlatform'
 import {
   Search, Plus, Filter, LayoutGrid, List,
-  Edit2, Trash2, Eye, ChevronUp, ChevronDown, Download, ShieldCheck, ShieldOff,
+  Edit2, Trash2, Eye, ChevronUp, ChevronDown, Download, ShieldCheck, ShieldOff, Ban,
 } from 'lucide-react'
 import AssetModal from '../components/AssetModal'
 import AssetForm from '../components/AssetForm'
+import { exportCSV as doExportCSV } from '../lib/exportCSV'
 
 function fmtDate(str) {
   if (!str) return '—'
@@ -69,23 +72,36 @@ export default function Assets() {
   const { assets, deleteAsset } = useAssets()
   const { categorias, setores, situacoes, periodosManutencao } = useMasterData()
   const { profile } = useAuth()
+  const { isAndroid } = usePlatform()
+  const location = useLocation()
+  const nav = location.state ?? {}
   const canEdit = profile?.role === 'admin' || profile?.role === 'user'
   const [search, setSearch] = useState('')
-  const [filterCategory, setFilterCategory] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
+  const [filterCategory, setFilterCategory] = useState(nav.filterCategory ?? '')
+  const [filterStatus, setFilterStatus] = useState(nav.filterStatus ?? '')
   const [filterDept, setFilterDept] = useState('')
-  const [filterWarranty, setFilterWarranty] = useState('')
+  const [filterWarranty, setFilterWarranty] = useState(nav.filterWarranty ?? '')
+  const [showDescartados, setShowDescartados] = useState(false)
   const [sortField, setSortField] = useState('name')
   const [sortDir, setSortDir] = useState('asc')
   const [view, setView] = useState('table')
+  const effectiveView = isAndroid ? 'grid' : view
   const [viewingAsset, setViewingAsset] = useState(null)
   const [editingAsset, setEditingAsset] = useState(null)
   const [showForm, setShowForm] = useState(false)
-  const [showFilters, setShowFilters] = useState(false)
+  const [showFilters, setShowFilters] = useState(
+    !!(nav.filterCategory || nav.filterStatus || nav.filterWarranty)
+  )
   const [showExportMenu, setShowExportMenu] = useState(false)
+
+  const descartadosCount = useMemo(
+    () => assets.filter(a => a.status === 'descartado').length,
+    [assets]
+  )
 
   const filtered = useMemo(() => {
     let list = assets.filter(a => {
+      if (!showDescartados && a.status === 'descartado') return false
       const q = search.toLowerCase()
       const matchesSearch = !q || [a.name, a.serialNumber, a.assignedTo, a.brand, a.model]
         .some(v => v?.toLowerCase().includes(q))
@@ -109,7 +125,7 @@ export default function Assets() {
     })
 
     return list
-  }, [assets, search, filterCategory, filterStatus, filterDept, filterWarranty, sortField, sortDir])
+  }, [assets, search, filterCategory, filterStatus, filterDept, filterWarranty, sortField, sortDir, showDescartados])
 
   function handleSort(field) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -129,33 +145,10 @@ export default function Assets() {
     setFilterWarranty('')
   }
 
-  function exportCSV() {
-    const headers = ['Hostname', 'Serial', 'Categoria', 'Marca', 'Modelo', 'Status', 'Setor', 'Responsável', 'Memória', 'Armazenamento', 'Data Compra', 'Garantia', 'Observações']
-    const rows = filtered.map(a => {
-      const cat = categorias.items.find(c => c.id === a.category)?.label || a.category
-      const stat = situacoes.items.find(s => s.id === a.status)?.nome || a.status
-      return [
-        a.name, a.serialNumber, cat, a.brand, a.model, stat, a.department, a.assignedTo,
-        a.memory, a.storage, a.purchaseDate, a.warrantyExpiry, (a.notes || '').replace(/\n/g, ' ')
-      ]
-    })
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
-    ].join('\n')
-    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `inventario_${new Date().toISOString().split('T')[0]}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  function exportCSVCompleto() {
-    // Apenas tipos periódicos viram colunas (ex: Limpeza, Formatação)
-    const periodos = periodosManutencao.items.filter(p => p.periodico && p.dias)
+  function buildCSV(includeMaintenances = false) {
+    const periodos = includeMaintenances
+      ? periodosManutencao.items.filter(p => p.periodico && p.dias)
+      : []
 
     const headers = [
       'Hostname', 'Serial', 'Categoria', 'Marca', 'Modelo', 'Status', 'Setor', 'Responsável',
@@ -166,15 +159,12 @@ export default function Assets() {
     const rows = filtered.map(a => {
       const cat  = categorias.items.find(c => c.id === a.category)?.label || a.category
       const stat = situacoes.items.find(s => s.id === a.status)?.nome || a.status
-
-      // Para cada tipo periódico, busca a data da última manutenção
       const manutCols = periodos.map(p => {
         const last = (a.maintenances ?? [])
           .filter(m => m.type === p.tipo && m.date)
           .sort((x, y) => y.date.localeCompare(x.date))[0]
         return last ? fmtDate(last.date) : ''
       })
-
       return [
         a.name, a.serialNumber, cat, a.brand, a.model, stat, a.department, a.assignedTo,
         a.memory, a.storage, fmtDate(a.purchaseDate), fmtDate(a.warrantyExpiry),
@@ -183,18 +173,20 @@ export default function Assets() {
       ]
     })
 
-    const csvContent = [
+    return [
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',')),
     ].join('\n')
-    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `inventario_completo_${new Date().toISOString().split('T')[0]}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  }
+
+  function exportCSV() {
+    const date = new Date().toISOString().split('T')[0]
+    doExportCSV(`inventario_${date}.csv`, buildCSV(false))
+  }
+
+  function exportCSVCompleto() {
+    const date = new Date().toISOString().split('T')[0]
+    doExportCSV(`inventario_completo_${date}.csv`, buildCSV(true))
   }
 
   const activeFilters = [filterCategory, filterStatus, filterDept, filterWarranty].filter(Boolean).length
@@ -230,7 +222,10 @@ export default function Assets() {
 
         <div className="flex gap-2">
           <button
-            onClick={() => setShowFilters(f => !f)}
+            onClick={() => {
+              if (showFilters) { setShowFilters(false); clearFilters() }
+              else setShowFilters(true)
+            }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
               showFilters || activeFilters > 0
                 ? 'bg-blue-50 border-blue-200 text-blue-700'
@@ -244,22 +239,24 @@ export default function Assets() {
             )}
           </button>
 
-          <div className="flex rounded-xl border border-slate-200 overflow-hidden bg-white">
-            <button
-              onClick={() => setView('table')}
-              className={`p-2.5 transition-colors ${view === 'table' ? 'bg-blue-500 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
-              title="Visualização em tabela"
-            >
-              <List size={16} />
-            </button>
-            <button
-              onClick={() => setView('grid')}
-              className={`p-2.5 transition-colors ${view === 'grid' ? 'bg-blue-500 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
-              title="Visualização em cards"
-            >
-              <LayoutGrid size={16} />
-            </button>
-          </div>
+          {!isAndroid && (
+            <div className="flex rounded-xl border border-slate-200 overflow-hidden bg-white">
+              <button
+                onClick={() => setView('table')}
+                className={`p-2.5 transition-colors ${view === 'table' ? 'bg-blue-500 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                title="Visualização em tabela"
+              >
+                <List size={16} />
+              </button>
+              <button
+                onClick={() => setView('grid')}
+                className={`p-2.5 transition-colors ${view === 'grid' ? 'bg-blue-500 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                title="Visualização em cards"
+              >
+                <LayoutGrid size={16} />
+              </button>
+            </div>
+          )}
 
           <div className="relative">
             <div className="flex rounded-xl border border-slate-200 overflow-visible">
@@ -387,16 +384,29 @@ export default function Assets() {
         </div>
       )}
 
-      {/* ── Count ── */}
+      {/* ── Count + toggle descartados ── */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">
           {filtered.length} {filtered.length === 1 ? 'ativo encontrado' : 'ativos encontrados'}
           {filtered.length !== assets.length && ` de ${assets.length}`}
         </p>
+        {descartadosCount > 0 && (
+          <button
+            onClick={() => setShowDescartados(v => !v)}
+            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+              showDescartados
+                ? 'bg-zinc-100 border-zinc-300 text-zinc-700'
+                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <Ban size={13} />
+            {showDescartados ? 'Ocultar descartados' : `Mostrar descartados (${descartadosCount})`}
+          </button>
+        )}
       </div>
 
       {/* ── Table view ── */}
-      {view === 'table' && (
+      {effectiveView === 'table' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -483,7 +493,7 @@ export default function Assets() {
       )}
 
       {/* ── Grid view ── */}
-      {view === 'grid' && (
+      {effectiveView === 'grid' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.length === 0 ? (
             <div className="col-span-full text-center py-12 text-slate-400">
@@ -493,12 +503,19 @@ export default function Assets() {
             const cat = categorias.items.find(c => c.id === asset.category)
             const Icon = resolveIcon(cat?.icon)
             return (
-              <div key={asset.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 hover:shadow-md transition-shadow">
+              <div key={asset.id} className={`bg-white rounded-2xl border shadow-sm p-4 hover:shadow-md transition-shadow ${asset._pending ? 'border-amber-200' : 'border-slate-100'}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${cat?.color ?? 'bg-slate-100 text-slate-600'}`}>
                     <Icon size={18} />
                   </div>
-                  <StatusBadge statusId={asset.status} situacoesItems={situacoes.items} />
+                  <div className="flex items-center gap-1.5">
+                    {asset._pending && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 leading-none">
+                        PENDENTE
+                      </span>
+                    )}
+                    <StatusBadge statusId={asset.status} situacoesItems={situacoes.items} />
+                  </div>
                 </div>
                 <h3 className="font-semibold text-slate-800 text-sm leading-tight mb-0.5">{asset.name}</h3>
                 <p className="text-xs text-slate-400 mb-3">{asset.brand} {asset.model}</p>

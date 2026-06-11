@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { X, Save, ExternalLink, Loader2 } from 'lucide-react'
+import { X, Save, ExternalLink, Loader2, ScanBarcode } from 'lucide-react'
 import { useAssets } from '../context/AssetsContext'
 import { useMasterData } from '../context/MasterDataContext'
+import { usePlatform } from '../hooks/usePlatform'
+import BarcodeScannerModal from './BarcodeScannerModal'
 
 const EMPTY = {
   name: '', category: '', status: '',
@@ -28,6 +30,7 @@ const selectClass = inputClass
 export default function AssetForm({ asset, onClose }) {
   const { addAsset, updateAsset } = useAssets()
   const { responsaveis, setores, categorias, marcas, situacoes } = useMasterData()
+  const { isAndroid } = usePlatform()
   const isEdit = !!asset
 
   const [form, setForm] = useState(() => {
@@ -38,8 +41,14 @@ export default function AssetForm({ asset, onClose }) {
       department: setores.items[0]?.nome ?? '',
     }
   })
-  const [errors, setErrors] = useState({})
-  const [saving, setSaving] = useState(false)
+  const [errors, setErrors]     = useState({})
+  const [saving, setSaving]     = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
+
+  function handleScan(text) {
+    set('serialNumber', text.trim())
+    setShowScanner(false)
+  }
 
   function set(key, value) {
     setForm(f => ({ ...f, [key]: value }))
@@ -96,12 +105,22 @@ export default function AssetForm({ asset, onClose }) {
               {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
             </Field>
             <Field label="Número de Série" required>
-              <input
-                value={form.serialNumber}
-                onChange={e => set('serialNumber', e.target.value)}
-                placeholder="Ex: SN-DL-001"
-                className={`${inputClass} ${errors.serialNumber ? 'border-red-300' : ''}`}
-              />
+              <div className="flex gap-2">
+                <input
+                  value={form.serialNumber}
+                  onChange={e => set('serialNumber', e.target.value)}
+                  placeholder="Ex: SN-DL-001"
+                  className={`${inputClass} flex-1 ${errors.serialNumber ? 'border-red-300' : ''}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  title="Escanear com câmera"
+                  className="shrink-0 flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 active:scale-95 transition-all"
+                >
+                  <ScanBarcode size={18} />
+                </button>
+              </div>
               {errors.serialNumber && <p className="text-xs text-red-500">{errors.serialNumber}</p>}
             </Field>
           </div>
@@ -223,6 +242,13 @@ export default function AssetForm({ asset, onClose }) {
           </div>
         </form>
       </div>
+
+      {showScanner && (
+        <BarcodeScannerModal
+          onScan={handleScan}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   )
 }

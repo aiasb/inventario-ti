@@ -29,6 +29,7 @@ export const initialSituacoes = [
   { id: 'em_estoque', nome: 'Em Estoque', descricao: 'Disponível no estoque, não alocado', cor: 'bg-blue-100 text-blue-700 border-blue-200' },
   { id: 'em_uso', nome: 'Em Uso', descricao: 'Alocado e em uso por um colaborador ou setor', cor: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   { id: 'obsoleto', nome: 'Obsoleto', descricao: 'Equipamento obsoleto ou fora de condições de uso', cor: 'bg-red-100 text-red-700 border-red-200' },
+  { id: 'descartado', nome: 'Descartado', descricao: 'Ativo retirado definitivamente do parque de TI', cor: 'bg-zinc-100 text-zinc-600 border-zinc-300' },
 ]
 
 // Master data — initial seeds

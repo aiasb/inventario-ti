@@ -1,9 +1,14 @@
 import { useState } from 'react'
 import { Monitor, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, UserPlus, LogIn } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useBranding } from '../context/BrandingContext'
+import { usePlatform } from '../hooks/usePlatform'
 
 export default function Login() {
   const { signIn, signUp } = useAuth()
+  const { branding } = useBranding()
+  const { companyName, companySubtitle, logoUrl, primaryColor } = branding
+  const { isAndroid } = usePlatform()
   const [mode, setMode] = useState('login') // 'login' | 'register'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -42,25 +47,19 @@ export default function Login() {
   return (
     <div className="min-h-screen flex bg-slate-950">
       {/* Left — branding panel */}
-      <div className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 bg-gradient-to-br from-blue-600 via-blue-700 to-slate-900 p-12 relative overflow-hidden">
+      <div
+        className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-12 relative overflow-hidden"
+        style={{ background: `linear-gradient(135deg, ${primaryColor}ee 0%, ${primaryColor}99 50%, #0f172a 100%)` }}
+      >
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-blue-500/20 blur-3xl" />
+          <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
           <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-slate-900/60 blur-3xl" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full border border-white/5" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full border border-white/5" />
         </div>
 
-        {/* Logo */}
-        <div className="relative flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center border border-white/20">
-            <Monitor size={22} className="text-white" />
-          </div>
-          <div>
-            <p className="text-white font-semibold text-lg leading-tight">Inventário TI</p>
-            <p className="text-blue-200 text-xs">Gestão de Ativos</p>
-          </div>
-        </div>
+        <div />
 
         {/* Features */}
         <div className="relative space-y-6">
@@ -88,28 +87,45 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="relative text-blue-300 text-xs">© 2025 Inventário TI. Todos os direitos reservados.</p>
+        <p className="relative text-white/40 text-xs">© {new Date().getFullYear()} {companyName}. Todos os direitos reservados.</p>
       </div>
 
       {/* Right — form panel */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
-              <Monitor size={20} className="text-white" />
-            </div>
-            <p className="text-white font-semibold text-lg">Inventário TI</p>
-          </div>
+          {/* Mobile logo — oculto no Android (logo já aparece centralizado no card) */}
+          {!isAndroid && <div className="flex items-center gap-3 mb-8 lg:hidden">
+            {logoUrl ? (
+              <img src={logoUrl} alt={companyName} className="h-10 w-auto object-contain" />
+            ) : (
+              <>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: primaryColor }}>
+                  <Monitor size={20} className="text-white" />
+                </div>
+                <p className="text-white font-semibold text-lg">{companyName}</p>
+              </>
+            )}
+          </div>}
 
           {/* Card */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-            {/* Header */}
-            <div className="mb-7">
+
+            {/* Logo centered above form */}
+            <div className="flex flex-col items-center mb-7">
+              {logoUrl ? (
+                <img src={logoUrl} alt={companyName} className="h-20 w-auto object-contain mb-5" />
+              ) : (
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  <Monitor size={28} className="text-white" />
+                </div>
+              )}
               <h2 className="text-xl font-bold text-white">
                 {mode === 'login' ? 'Acessar conta' : 'Criar conta'}
               </h2>
-              <p className="text-slate-400 text-sm mt-1">
+              <p className="text-slate-400 text-sm mt-1 text-center">
                 {mode === 'login'
                   ? 'Informe suas credenciais para continuar'
                   : 'Preencha os dados para criar sua conta'}
@@ -195,7 +211,8 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:text-blue-400 text-white font-semibold rounded-xl transition-colors mt-2"
+                className="w-full flex items-center justify-center gap-2 py-3 text-white font-semibold rounded-xl transition-opacity mt-2 disabled:opacity-50"
+                style={{ backgroundColor: primaryColor }}
               >
                 {loading
                   ? <Loader2 size={16} className="animate-spin" />
