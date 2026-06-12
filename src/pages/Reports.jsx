@@ -639,7 +639,7 @@ export default function Reports() {
           />
           <KpiCard
             label="Garantias em dia"
-            value={data?.warranty?.active}
+            value={data ? (data.warranty.active + data.warranty.expiring_30 + data.warranty.expiring_90) : undefined}
             icon={Shield} colorClass="bg-emerald-500" loading={loading}
           />
           <KpiCard
