@@ -326,7 +326,7 @@ export default function Reports() {
       const actualW = img.naturalWidth
       const actualH = img.naturalHeight
 
-      const pdf         = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pdf         = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
       const pageW       = pdf.internal.pageSize.getWidth()
       const pageH       = pdf.internal.pageSize.getHeight()
       const margin      = 10
