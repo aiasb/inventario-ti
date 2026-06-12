@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useMasterData } from '../context/MasterDataContext'
 import { useAssets } from '../context/AssetsContext'
 import { fetchReportData } from '../lib/api'
@@ -8,8 +8,9 @@ import {
   PieChart, Pie, Cell,
   AreaChart, Area,
 } from 'recharts'
-import { RefreshCw, X, Download, Package, Wrench, Shield, AlertTriangle, FileText, TrendingUp } from 'lucide-react'
+import { RefreshCw, X, Download, Package, Wrench, Shield, AlertTriangle, FileText, Loader2 } from 'lucide-react'
 import { exportCSV } from '../lib/exportCSV'
+import { Capacitor } from '@capacitor/core'
 
 const PALETTE = ['#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#06b6d4', '#f59e0b', '#ef4444', '#64748b']
 const WARRANTY_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#94a3b8']
@@ -155,6 +156,8 @@ function PieLegend({ data }) {
 export default function Reports() {
   const { categorias, situacoes, setores, periodosManutencao } = useMasterData()
   const { assets } = useAssets()
+  const chartsRef = useRef(null)
+  const [exportingPDF, setExportingPDF] = useState(false)
   const [filters, setFilters] = useState({ category: '', status: '', dept: '', warranty: '', manutLimpeza: '', manutFormatacao: '' })
   const [customRanges, setCustomRanges] = useState({
     warranty:      { from: '', to: '' },
@@ -299,6 +302,69 @@ export default function Reports() {
 
   const warrantyAlert = data ? (data.warranty?.expired ?? 0) + (data.warranty?.expiring_30 ?? 0) : null
 
+  async function handleExportPDF() {
+    if (!chartsRef.current || exportingPDF) return
+    setExportingPDF(true)
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const { jsPDF }   = await import('jspdf')
+
+      const el     = chartsRef.current
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#f1f5f9' })
+
+      const pdf      = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pageW    = pdf.internal.pageSize.getWidth()
+      const pageH    = pdf.internal.pageSize.getHeight()
+      const margin   = 10
+      const usableW  = pageW - margin * 2
+      const imgH     = (canvas.height * usableW) / canvas.width
+      const date     = new Date().toLocaleDateString('pt-BR')
+
+      pdf.setFontSize(14)
+      pdf.setTextColor(30, 41, 59)
+      pdf.text('Relatórios e Análises — Inventário de TI', margin, margin + 6)
+      pdf.setFontSize(9)
+      pdf.setTextColor(100, 116, 139)
+      pdf.text(`Gerado em ${date}${hasFilters ? ' · Filtros ativos' : ''}`, margin, margin + 12)
+
+      let y = margin + 18
+      let remaining = imgH
+
+      while (remaining > 0) {
+        const sliceH  = Math.min(remaining, pageH - y - margin)
+        const srcY    = (imgH - remaining) / imgH * canvas.height
+        const srcH    = sliceH / imgH * canvas.height
+
+        const slice   = document.createElement('canvas')
+        slice.width   = canvas.width
+        slice.height  = srcH
+        slice.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
+
+        pdf.addImage(slice.toDataURL('image/png'), 'PNG', margin, y, usableW, sliceH)
+        remaining -= sliceH
+        if (remaining > 0) { pdf.addPage(); y = margin }
+      }
+
+      const filename = `relatorio-ti-${new Date().toISOString().split('T')[0]}.pdf`
+
+      if (Capacitor.isNativePlatform()) {
+        const { Filesystem } = await import('@capacitor/filesystem')
+        const { Share }      = await import('@capacitor/share')
+        const { Directory } = await import('@capacitor/filesystem')
+        const b64 = pdf.output('datauristring').split(',')[1]
+        await Filesystem.writeFile({ path: filename, data: b64, directory: Directory.Cache })
+        const { uri } = await Filesystem.getUri({ path: filename, directory: Directory.Cache })
+        await Share.share({ title: filename, files: [uri], dialogTitle: 'Exportar PDF' })
+      } else {
+        pdf.save(filename)
+      }
+    } catch (err) {
+      console.error('PDF export error:', err)
+    } finally {
+      setExportingPDF(false)
+    }
+  }
+
   function handleExportCSV() {
     const headers = ['Hostname', 'Categoria', 'Status', 'Setor', 'Responsável', 'Serial', 'Marca', 'Modelo', 'Localização', 'Data Compra', 'Garantia']
     const rows = (filteredAssets ?? assets).map(a => [
@@ -316,15 +382,15 @@ export default function Reports() {
   return (
     <div className="min-h-full bg-slate-100 flex flex-col">
 
-      {/* ── Top header (dark) ─────────────────────────────────────────────── */}
-      <div className="bg-slate-800 px-5 pt-5 pb-0 shrink-0">
+      {/* ── Top header ────────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-slate-200 px-5 pt-5 pb-0 shrink-0">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <h2 className="text-lg font-bold text-white">Relatórios e Análises</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="text-lg font-bold text-slate-800">Relatórios e Análises</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
               Inventário de Ativos de TI
               {!loading && data && (
-                <span className="ml-1.5 text-slate-500">
+                <span className="ml-1.5 text-slate-400">
                   • {filteredAssets != null ? filteredAssets.length : data.total} ativo{(filteredAssets?.length ?? data.total) !== 1 ? 's' : ''}
                   {hasFilters ? ' filtrados' : ''}
                 </span>
@@ -333,14 +399,16 @@ export default function Reports() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-colors"
+              onClick={handleExportPDF}
+              disabled={exportingPDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white rounded-lg text-xs font-medium transition-colors"
             >
-              <FileText size={13} /> Exportar Relatório
+              {exportingPDF ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+              {exportingPDF ? 'Gerando PDF…' : 'Exportar Relatório'}
             </button>
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-600 hover:border-slate-400 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 hover:border-slate-400 text-slate-600 hover:text-slate-800 rounded-lg text-xs font-medium transition-colors"
             >
               <Download size={13} /> Exportar CSV
             </button>
@@ -348,7 +416,7 @@ export default function Reports() {
         </div>
 
         {/* Filter strip */}
-        <div className="bg-slate-700/60 rounded-t-2xl px-4 py-2.5 flex flex-wrap items-center gap-2">
+        <div className="bg-slate-50 rounded-t-2xl px-4 py-2.5 flex flex-wrap items-center gap-2">
           <select value={filters.category} onChange={e => setFilter('category', e.target.value)} className={selectClass}>
             <option value="">Todas categorias</option>
             {categorias.items.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -386,35 +454,35 @@ export default function Reports() {
           </select>
 
           {hasFilters && (
-            <button onClick={clearFilters} className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+            <button onClick={clearFilters} className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-800 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors">
               <X size={11} /> Limpar
             </button>
           )}
 
-          {loading && <RefreshCw size={13} className="text-blue-400 animate-spin ml-auto" />}
+          {loading && <RefreshCw size={13} className="text-blue-500 animate-spin ml-auto" />}
         </div>
 
         {/* Date range row — appears when any filter is "personalizado" */}
         {hasCustom && (
-          <div className="bg-slate-700/40 border-t border-slate-600/40 px-4 py-3 flex flex-wrap gap-4">
+          <div className="bg-slate-100 border-t border-slate-200 px-4 py-3 flex flex-wrap gap-4">
             {filters.warranty === 'personalizado' && (
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-300 shrink-0">Garantia:</span>
+                <span className="text-xs font-medium text-slate-600 shrink-0">Garantia:</span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-slate-400">De</span>
+                  <span className="text-[10px] text-slate-500">De</span>
                   <input
                     type="date"
                     value={customRanges.warranty.from}
                     onChange={e => setRange('warranty', 'from', e.target.value)}
-                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
                   />
-                  <span className="text-[10px] text-slate-400">Até</span>
+                  <span className="text-[10px] text-slate-500">Até</span>
                   <input
                     type="date"
                     value={customRanges.warranty.to}
                     onChange={e => setRange('warranty', 'to', e.target.value)}
                     min={customRanges.warranty.from || undefined}
-                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
               </div>
@@ -422,24 +490,24 @@ export default function Reports() {
 
             {filters.manutLimpeza === 'personalizado' && (
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-300 shrink-0">
+                <span className="text-xs font-medium text-slate-600 shrink-0">
                   {limpezaPeriodo?.tipo ?? 'Limpeza'} (próx.):
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-slate-400">De</span>
+                  <span className="text-[10px] text-slate-500">De</span>
                   <input
                     type="date"
                     value={customRanges.manutLimpeza.from}
                     onChange={e => setRange('manutLimpeza', 'from', e.target.value)}
-                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
                   />
-                  <span className="text-[10px] text-slate-400">Até</span>
+                  <span className="text-[10px] text-slate-500">Até</span>
                   <input
                     type="date"
                     value={customRanges.manutLimpeza.to}
                     onChange={e => setRange('manutLimpeza', 'to', e.target.value)}
                     min={customRanges.manutLimpeza.from || undefined}
-                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
               </div>
@@ -447,24 +515,24 @@ export default function Reports() {
 
             {filters.manutFormatacao === 'personalizado' && (
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-300 shrink-0">
+                <span className="text-xs font-medium text-slate-600 shrink-0">
                   {formatacaoPeriodo?.tipo ?? 'Formatação'} (próx.):
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-slate-400">De</span>
+                  <span className="text-[10px] text-slate-500">De</span>
                   <input
                     type="date"
                     value={customRanges.manutFormatacao.from}
                     onChange={e => setRange('manutFormatacao', 'from', e.target.value)}
-                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
                   />
-                  <span className="text-[10px] text-slate-400">Até</span>
+                  <span className="text-[10px] text-slate-500">Até</span>
                   <input
                     type="date"
                     value={customRanges.manutFormatacao.to}
                     onChange={e => setRange('manutFormatacao', 'to', e.target.value)}
                     min={customRanges.manutFormatacao.from || undefined}
-                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
               </div>
@@ -474,7 +542,7 @@ export default function Reports() {
       </div>
 
       {/* ── Content ───────────────────────────────────────────────────────── */}
-      <div className="flex-1 p-5 space-y-4">
+      <div ref={chartsRef} className="flex-1 p-5 space-y-4">
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 text-sm text-red-700">
