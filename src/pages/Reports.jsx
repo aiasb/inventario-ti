@@ -178,11 +178,29 @@ export default function Reports() {
     return next
   }
 
+  // Fallback: última manutenção cujo type contenha a busca (sem período cadastrado)
+  function getLastManutDate(asset, search) {
+    const matches = (asset.maintenances ?? []).filter(m => normStr(m.type).includes(search))
+    return matches.length ? new Date(matches[0].date) : null
+  }
+
   function inRange(date, from, to) {
     if (!date) return false
     if (from && date < new Date(from)) return false
-    if (to)   { const t = new Date(to); t.setHours(23,59,59,999); if (date > t) return false }
+    if (to) { const t = new Date(to); t.setHours(23, 59, 59, 999); if (date > t) return false }
     return true
+  }
+
+  function applyManutFilter(asset, filterVal, periodo, search, rangeKey) {
+    if (!filterVal) return true
+    if (filterVal === 'personalizado') {
+      const date = periodo
+        ? getNextDueDate(asset, periodo.tipo, periodo.dias)
+        : getLastManutDate(asset, search)
+      return inRange(date, customRanges[rangeKey].from, customRanges[rangeKey].to)
+    }
+    if (!periodo) return true // sem período, não filtra a_vencer/vencida
+    return getMaintenanceStatus(asset, periodo.tipo, periodo.dias, today) === filterVal
   }
 
   const filteredAssets = useMemo(() => {
@@ -197,22 +215,8 @@ export default function Reports() {
         if (warranty === 'a_vencer'      && (exp < today || exp > in90)) return false
         if (warranty === 'personalizado' && !inRange(exp, customRanges.warranty.from, customRanges.warranty.to)) return false
       }
-      if (manutLimpeza && limpezaPeriodo) {
-        if (manutLimpeza === 'personalizado') {
-          const next = getNextDueDate(a, limpezaPeriodo.tipo, limpezaPeriodo.dias)
-          if (!inRange(next, customRanges.manutLimpeza.from, customRanges.manutLimpeza.to)) return false
-        } else {
-          if (getMaintenanceStatus(a, limpezaPeriodo.tipo, limpezaPeriodo.dias, today) !== manutLimpeza) return false
-        }
-      }
-      if (manutFormatacao && formatacaoPeriodo) {
-        if (manutFormatacao === 'personalizado') {
-          const next = getNextDueDate(a, formatacaoPeriodo.tipo, formatacaoPeriodo.dias)
-          if (!inRange(next, customRanges.manutFormatacao.from, customRanges.manutFormatacao.to)) return false
-        } else {
-          if (getMaintenanceStatus(a, formatacaoPeriodo.tipo, formatacaoPeriodo.dias, today) !== manutFormatacao) return false
-        }
-      }
+      if (!applyManutFilter(a, manutLimpeza,   limpezaPeriodo,    'limpez',  'manutLimpeza'))   return false
+      if (!applyManutFilter(a, manutFormatacao, formatacaoPeriodo, 'format', 'manutFormatacao')) return false
       return true
     })
   }, [assets, filters.warranty, filters.manutLimpeza, filters.manutFormatacao,
@@ -340,14 +344,14 @@ export default function Reports() {
             <option value="personalizado">Período personalizado</option>
           </select>
 
-          <select value={filters.manutLimpeza} onChange={e => setFilter('manutLimpeza', e.target.value)} className={selectClass} disabled={!limpezaPeriodo}>
+          <select value={filters.manutLimpeza} onChange={e => setFilter('manutLimpeza', e.target.value)} className={selectClass}>
             <option value="">Limpeza — todas</option>
             <option value="a_vencer">A vencer (≤30d)</option>
             <option value="vencida">Vencida</option>
             <option value="personalizado">Período personalizado</option>
           </select>
 
-          <select value={filters.manutFormatacao} onChange={e => setFilter('manutFormatacao', e.target.value)} className={selectClass} disabled={!formatacaoPeriodo}>
+          <select value={filters.manutFormatacao} onChange={e => setFilter('manutFormatacao', e.target.value)} className={selectClass}>
             <option value="">Formatação — todas</option>
             <option value="a_vencer">A vencer (≤30d)</option>
             <option value="vencida">Vencida</option>
