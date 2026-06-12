@@ -181,12 +181,23 @@ async function initDb(pool) {
     ) ALTER TABLE ${table} ADD ${col} ${type}
   `)
 
-  await addCol('setores',   'responsavel', 'NVARCHAR(255)')
-  await addCol('setores',   'ramal',       'NVARCHAR(50)')
-  await addCol('analistas', 'matricula',   'NVARCHAR(100)')
-  await addCol('marcas',    'segmento',    'NVARCHAR(100)')
-  await addCol('marcas',    'site',        'NVARCHAR(255)')
-  await addCol('marcas',    'observacoes', 'NVARCHAR(MAX)')
+  await addCol('setores',             'responsavel', 'NVARCHAR(255)')
+  await addCol('setores',             'ramal',       'NVARCHAR(50)')
+  await addCol('analistas',           'matricula',   'NVARCHAR(100)')
+  await addCol('marcas',              'segmento',    'NVARCHAR(100)')
+  await addCol('marcas',              'site',        'NVARCHAR(255)')
+  await addCol('marcas',              'observacoes', 'NVARCHAR(MAX)')
+  await addCol('periodos_manutencao', 'periodico',   'BIT')
+  await addCol('periodos_manutencao', 'descricao',   'NVARCHAR(500)')
+
+  // dias era NOT NULL — tornar nullable para suportar manutenções não-periódicas
+  await pool.request().query(`
+    IF EXISTS (
+      SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME = 'periodos_manutencao' AND COLUMN_NAME = 'dias'
+        AND IS_NULLABLE = 'NO'
+    ) ALTER TABLE periodos_manutencao ALTER COLUMN dias INT NULL
+  `)
 
   // ─── Seed inicial ─────────────────────────────────────────────────────────
 

@@ -11,14 +11,16 @@ const TABLE_CONFIG = {
   marcas:              { cols: ['nome', 'segmento', 'site', 'observacoes'] },
   situacoes:           { cols: ['nome', 'descricao', 'cor'] },
   analistas:           { cols: ['nome', 'email', 'matricula'] },
-  periodos_manutencao: { cols: ['tipo', 'dias'], intCols: ['dias'] },
+  periodos_manutencao: { cols: ['tipo', 'dias', 'periodico', 'descricao'], intCols: ['dias'], bitCols: ['periodico'] },
 }
 
-function bindCols(request, body, cols, intCols = []) {
+function bindCols(request, body, cols, intCols = [], bitCols = []) {
   for (const col of cols) {
     const val = body[col] ?? null
     if (intCols.includes(col)) {
       request.input(col, sql.Int, val !== null ? Number(val) : null)
+    } else if (bitCols.includes(col)) {
+      request.input(col, sql.Bit, val !== null ? (val ? 1 : 0) : null)
     } else {
       request.input(col, sql.NVarChar, val !== null ? String(val) : null)
     }
@@ -26,7 +28,7 @@ function bindCols(request, body, cols, intCols = []) {
 }
 
 function createCrudRouter(tableName) {
-  const { cols, intCols = [] } = TABLE_CONFIG[tableName]
+  const { cols, intCols = [], bitCols = [] } = TABLE_CONFIG[tableName]
   const router = express.Router()
 
   // GET /api/:table
@@ -47,7 +49,7 @@ function createCrudRouter(tableName) {
       const pool = await getPool()
       const id = req.body.id || uuidv4()
       const request = pool.request().input('id', sql.UniqueIdentifier, id)
-      bindCols(request, req.body, cols, intCols)
+      bindCols(request, req.body, cols, intCols, bitCols)
 
       const colList = ['id', ...cols].join(', ')
       const valList = ['@id', ...cols.map(c => `@${c}`)].join(', ')
@@ -66,7 +68,7 @@ function createCrudRouter(tableName) {
     try {
       const pool = await getPool()
       const request = pool.request().input('id', sql.UniqueIdentifier, req.params.id)
-      bindCols(request, req.body, cols, intCols)
+      bindCols(request, req.body, cols, intCols, bitCols)
 
       const setClauses = cols.map(c => `${c} = @${c}`).join(', ')
       const { recordset } = await request.query(
