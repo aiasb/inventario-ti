@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Users, Shield, Mail, Edit2, Loader2, Search, X, Save, AlertCircle, CheckCircle2, Lock, Database, Trash2, ImageIcon, Monitor, RotateCcw, Paintbrush, BellRing, ShieldOff, Wrench, Clock, TriangleAlert } from 'lucide-react'
+import { Users, Shield, Mail, Edit2, Loader2, Search, X, Save, AlertCircle, CheckCircle2, Lock, Database, Trash2, ImageIcon, Monitor, RotateCcw, Paintbrush, BellRing, ShieldOff, Wrench, Clock, TriangleAlert, Wifi } from 'lucide-react'
 import CadastrosBase from './Cadastros'
 import { useBranding, DEFAULTS } from '../context/BrandingContext'
 import { useAlerts } from '../context/AlertsContext'
 import { usePlatform } from '../hooks/usePlatform'
 import { resetData } from '../lib/api'
 import { clearAllCache } from '../lib/offlineDB'
+import { getServerUrl, setServerUrl } from '../lib/api-client'
 
 const TABS = [
   { id: 'usuarios',  icon: Users,         label: 'Usuários e Acessos', shortLabel: 'Usuários' },
@@ -648,8 +649,17 @@ export default function Settings() {
     }
   }
 
+  // Server URL state
+  const [serverUrlInput, setServerUrlInput] = useState(() => getServerUrl())
+  const [serverUrlSaved, setServerUrlSaved] = useState(false)
+
+  function handleSaveServerUrl() {
+    setServerUrl(serverUrlInput)
+    setServerUrlSaved(true)
+    setTimeout(() => setServerUrlSaved(false), 3000)
+  }
+
   // Reset system state
-  const [showResetModal, setShowResetModal] = useState(false)
   const [resetConfirm, setResetConfirm] = useState('')
   const [isResetting, setIsResetting] = useState(false)
   const [resetOptions, setResetOptions] = useState({ assets: true, masterData: false, users: false })
@@ -1068,6 +1078,40 @@ export default function Settings() {
       {/* ── Sistema ─────────────────────────────────────────────────────── */}
       {activeTab === 'sistema' && (
         <div className="space-y-4">
+
+          {/* Servidor da API */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <Wifi size={18} className="text-blue-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Servidor da API</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  No Android, informe o IP da máquina na rede local (ex: http://192.168.1.10).
+                  Deixe em branco para usar URL relativa (web/Docker).
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={serverUrlInput}
+                onChange={e => setServerUrlInput(e.target.value)}
+                placeholder="http://192.168.1.x"
+                className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-400 transition-colors"
+              />
+              <button
+                onClick={handleSaveServerUrl}
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                {serverUrlSaved ? <CheckCircle2 size={14} /> : <Save size={14} />}
+                {serverUrlSaved ? 'Salvo!' : 'Salvar'}
+              </button>
+            </div>
+            {serverUrlSaved && (
+              <p className="text-xs text-emerald-600">URL salva. Feche e reabra o app para aplicar.</p>
+            )}
+          </div>
+
           {!isAdmin ? (
             <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-xl">
               <Lock size={14} /> Apenas administradores podem acessar esta área.
