@@ -253,6 +253,33 @@ export default function Reports() {
     }))
   , [data])
 
+  const assetAgeData = useMemo(() => {
+    const now = new Date()
+    const withDate = (filteredAssets ?? assets).filter(a => a.purchaseDate)
+    if (!withDate.length) return null
+
+    const ageYears = a => (now - new Date(a.purchaseDate)) / (1000 * 60 * 60 * 24 * 365.25)
+    const avg = withDate.reduce((s, a) => s + ageYears(a), 0) / withDate.length
+
+    const brackets = [
+      { label: '< 1 ano',  min: 0, max: 1  },
+      { label: '1–2 anos', min: 1, max: 2  },
+      { label: '2–3 anos', min: 2, max: 3  },
+      { label: '3–5 anos', min: 3, max: 5  },
+      { label: '5+ anos',  min: 5, max: Infinity },
+    ]
+    const distribution = brackets.map((b, i) => ({
+      label: b.label,
+      count: withDate.filter(a => { const y = ageYears(a); return y >= b.min && y < b.max }).length,
+      color: PALETTE[i % PALETTE.length],
+    })).filter(b => b.count > 0)
+
+    const totalYears  = Math.floor(avg)
+    const totalMonths = Math.round((avg - totalYears) * 12)
+
+    return { avg, totalYears, totalMonths, distribution, total: withDate.length }
+  }, [assets, filteredAssets])
+
   const warrantyData = useMemo(() => {
     if (!data?.warranty) return []
     return [
@@ -623,29 +650,43 @@ export default function Reports() {
             ) : !loading && <EmptyChart />}
           </ChartCard>
 
-          <ChartCard title="Top Marcas" sub="até 8 marcas" loading={loading}>
-            {data?.by_brand?.length > 0 ? (
-              <div className="space-y-2">
-                {data.by_brand.slice(0, 8).map((b, i) => {
-                  const max = data.by_brand[0]?.count ?? 1
-                  const pct = Math.round((b.count / max) * 100)
-                  return (
-                    <div key={i}>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-slate-600 font-medium truncate max-w-[130px]">{b.label}</span>
-                        <span className="font-bold text-slate-700 ml-2">{b.count.toLocaleString('pt-BR')}</span>
+          <ChartCard
+            title="Idade Média dos Ativos"
+            sub={assetAgeData ? `baseado em ${assetAgeData.total} ativo${assetAgeData.total !== 1 ? 's' : ''} com data de compra` : ''}
+            loading={loading}
+          >
+            {assetAgeData ? (
+              <div className="flex flex-col h-full">
+                <div className="flex items-end gap-1.5 mb-4">
+                  <span className="text-4xl font-bold text-slate-800">
+                    {assetAgeData.totalYears}
+                  </span>
+                  <span className="text-sm text-slate-500 mb-1">
+                    ano{assetAgeData.totalYears !== 1 ? 's' : ''}
+                    {assetAgeData.totalMonths > 0 && (
+                      <span className="ml-1">{assetAgeData.totalMonths} {assetAgeData.totalMonths !== 1 ? 'meses' : 'mês'}</span>
+                    )}
+                  </span>
+                </div>
+                <div className="space-y-2.5 flex-1">
+                  {assetAgeData.distribution.map((b, i) => {
+                    const max = Math.max(...assetAgeData.distribution.map(x => x.count))
+                    const pct = Math.round((b.count / max) * 100)
+                    return (
+                      <div key={i}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-slate-600 font-medium">{b.label}</span>
+                          <span className="font-bold text-slate-700">{b.count}</span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: b.color }} />
+                        </div>
                       </div>
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{ width: `${pct}%`, backgroundColor: PALETTE[i % PALETTE.length] }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            ) : !loading && <EmptyChart />}
+            ) : !loading && <EmptyChart text="Sem ativos com data de compra" />}
           </ChartCard>
         </div>
 
