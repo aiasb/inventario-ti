@@ -370,7 +370,7 @@ export default function AssetModal({ asset: assetProp, onClose, onEdit }) {
                           <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
                             <span className="flex items-center gap-1">
                               <Calendar size={11} />
-                              {m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+                              {m.date ? new Date(m.date.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
                             </span>
                             <span className="flex items-center gap-1">
                               <User size={11} />
