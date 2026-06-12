@@ -13,15 +13,19 @@ import AssetModal from '../components/AssetModal'
 import AssetForm from '../components/AssetForm'
 import { exportCSV as doExportCSV } from '../lib/exportCSV'
 
+function isoDatePart(str) {
+  return str ? str.split('T')[0] : str
+}
+
 function fmtDate(str) {
   if (!str) return '—'
-  const [y, m, d] = str.split('-')
+  const [y, m, d] = isoDatePart(str).split('-')
   return `${d}/${m}/${y}`
 }
 
 function warrantyStatus(dateStr) {
   if (!dateStr) return null
-  const [y, m, d] = dateStr.split('-').map(Number)
+  const [y, m, d] = isoDatePart(dateStr).split('-').map(Number)
   const exp = new Date(y, m - 1, d)
   const now = new Date()
   now.setHours(0, 0, 0, 0)

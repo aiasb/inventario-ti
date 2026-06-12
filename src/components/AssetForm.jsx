@@ -34,7 +34,11 @@ export default function AssetForm({ asset, onClose }) {
   const isEdit = !!asset
 
   const [form, setForm] = useState(() => {
-    if (isEdit) return { ...asset }
+    if (isEdit) return {
+      ...asset,
+      purchaseDate:   asset.purchaseDate   ? asset.purchaseDate.split('T')[0]   : '',
+      warrantyExpiry: asset.warrantyExpiry ? asset.warrantyExpiry.split('T')[0] : '',
+    }
     return {
       ...EMPTY,
       category: categorias.items[0]?.id ?? '',

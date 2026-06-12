@@ -300,12 +300,12 @@ export default function AssetModal({ asset: assetProp, onClose, onEdit }) {
                 <Field
                   icon={Calendar}
                   label="Data de Compra"
-                  value={asset.purchaseDate ? new Date(asset.purchaseDate + 'T00:00:00').toLocaleDateString('pt-BR') : undefined}
+                  value={asset.purchaseDate ? new Date(asset.purchaseDate.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR') : undefined}
                 />
                 <Field
                   icon={Calendar}
                   label="Garantia até"
-                  value={asset.warrantyExpiry ? new Date(asset.warrantyExpiry + 'T00:00:00').toLocaleDateString('pt-BR') : undefined}
+                  value={asset.warrantyExpiry ? new Date(asset.warrantyExpiry.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR') : undefined}
                 />
               </div>
               {asset.notes && (
