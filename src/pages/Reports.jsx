@@ -1,7 +1,6 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useMasterData } from '../context/MasterDataContext'
 import { useAssets } from '../context/AssetsContext'
-import { fetchReportData } from '../lib/api'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as RechTooltip, ResponsiveContainer,
@@ -155,7 +154,7 @@ function PieLegend({ data }) {
 
 export default function Reports() {
   const { categorias, situacoes, setores, periodosManutencao } = useMasterData()
-  const { assets } = useAssets()
+  const { assets, loading } = useAssets()
   const chartsRef = useRef(null)
   const [exportingPDF, setExportingPDF] = useState(false)
   const [filters, setFilters] = useState({ category: '', status: '', dept: '', warranty: '', manutLimpeza: '', manutFormatacao: '' })
@@ -164,9 +163,6 @@ export default function Reports() {
     manutLimpeza:  { from: '', to: '' },
     manutFormatacao: { from: '', to: '' },
   })
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }, [])
 
@@ -207,12 +203,15 @@ export default function Reports() {
   }
 
   const filteredAssets = useMemo(() => {
-    const { warranty, manutLimpeza, manutFormatacao } = filters
-    if (!warranty && !manutLimpeza && !manutFormatacao) return null
+    const { category, status, dept, warranty, manutLimpeza, manutFormatacao } = filters
+    if (!category && !status && !dept && !warranty && !manutLimpeza && !manutFormatacao) return null
     const in90 = new Date(today); in90.setDate(in90.getDate() + 90)
     return assets.filter(a => {
+      if (category && a.category   !== category) return false
+      if (status   && a.status     !== status)   return false
+      if (dept     && a.department !== dept)     return false
       if (warranty) {
-        const exp = a.warrantyExpiry ? new Date(a.warrantyExpiry) : null
+        const exp = a.warrantyExpiry ? new Date(a.warrantyExpiry.split('T')[0] + 'T00:00:00') : null
         if (!exp) return false
         if (warranty === 'vencida'       && exp >= today) return false
         if (warranty === 'a_vencer'      && (exp < today || exp > in90)) return false
@@ -222,7 +221,8 @@ export default function Reports() {
       if (!applyManutFilter(a, manutFormatacao, formatacaoPeriodo, 'format', 'manutFormatacao')) return false
       return true
     })
-  }, [assets, filters.warranty, filters.manutLimpeza, filters.manutFormatacao,
+  }, [assets, filters.category, filters.status, filters.dept,
+      filters.warranty, filters.manutLimpeza, filters.manutFormatacao,
       customRanges, limpezaPeriodo, formatacaoPeriodo, today])
 
   function setFilter(key, val) { setFilters(prev => ({ ...prev, [key]: val })) }
@@ -235,19 +235,81 @@ export default function Reports() {
   const hasFilters = Object.values(filters).some(Boolean)
   const hasCustom  = filters.warranty === 'personalizado' || filters.manutLimpeza === 'personalizado' || filters.manutFormatacao === 'personalizado'
 
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-    fetchReportData({
-      category:   filters.category   || null,
-      status:     filters.status     || null,
-      department: filters.dept       || null,
-    })
-      .then(d => { if (!cancelled) { setData(d); setLoading(false) } })
-      .catch(err => { if (!cancelled) { setError(err.message); setLoading(false) } })
-    return () => { cancelled = true }
-  }, [filters.category, filters.status, filters.dept])
+  const data = useMemo(() => {
+    const display = filteredAssets ?? assets
+    if (!display.length) return null
+
+    const t = new Date(); t.setHours(0, 0, 0, 0)
+    const in30 = new Date(t); in30.setDate(t.getDate() + 30)
+    const in90 = new Date(t); in90.setDate(t.getDate() + 90)
+
+    // Warranty buckets
+    let active = 0, expired = 0, expiring_30 = 0, expiring_90 = 0, none = 0
+    for (const a of display) {
+      if (!a.warrantyExpiry) { none++; continue }
+      const exp = new Date(a.warrantyExpiry.split('T')[0] + 'T00:00:00')
+      if (exp < t)      expired++
+      else if (exp <= in30) expiring_30++
+      else if (exp <= in90) expiring_90++
+      else              active++
+    }
+
+    // by_category
+    const catMap = {}
+    for (const a of display) { if (a.category) catMap[a.category] = (catMap[a.category] || 0) + 1 }
+    const by_category = Object.entries(catMap)
+      .map(([id, count]) => ({ id, label: categorias.items.find(c => c.id === id)?.label ?? id, count }))
+      .sort((a, b) => b.count - a.count)
+
+    // by_status
+    const statMap = {}
+    for (const a of display) { if (a.status) statMap[a.status] = (statMap[a.status] || 0) + 1 }
+    const by_status = Object.entries(statMap)
+      .map(([id, value]) => {
+        const sit = situacoes.items.find(s => s.id === id)
+        return { id, label: sit?.nome ?? id, cor: sit?.cor ?? '', value }
+      })
+      .sort((a, b) => b.value - a.value)
+
+    // by_department
+    const deptMap = {}
+    for (const a of display) { if (a.department) deptMap[a.department] = (deptMap[a.department] || 0) + 1 }
+    const by_department = Object.entries(deptMap)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count)
+
+    // manut_by_month (últimos 12 meses)
+    const monthMap = {}
+    for (const a of display) {
+      for (const m of (a.maintenances ?? [])) {
+        if (!m.date) continue
+        const month = m.date.split('T')[0].substring(0, 7)
+        monthMap[month] = (monthMap[month] || 0) + 1
+      }
+    }
+    const manut_by_month = Object.entries(monthMap)
+      .sort(([a], [b]) => a.localeCompare(b)).slice(-12)
+      .map(([month, count]) => ({ month, count }))
+
+    // manut_by_type (top 10)
+    const typeMap = {}
+    for (const a of display) {
+      for (const m of (a.maintenances ?? [])) {
+        if (!m.type) continue
+        typeMap[m.type] = (typeMap[m.type] || 0) + 1
+      }
+    }
+    const manut_by_type = Object.entries(typeMap)
+      .sort(([, a], [, b]) => b - a).slice(0, 10)
+      .map(([label, count]) => ({ label, count }))
+
+    return {
+      total: display.length,
+      total_manut: display.reduce((s, a) => s + (a.maintenances?.length ?? 0), 0),
+      warranty: { active, expired, expiring_30, expiring_90, none },
+      by_category, by_status, by_department, manut_by_month, manut_by_type,
+    }
+  }, [filteredAssets, assets, categorias.items, situacoes.items])
 
   const monthData = useMemo(() =>
     (data?.manut_by_month ?? []).map(m => ({
@@ -296,9 +358,8 @@ export default function Reports() {
 
   const statusData = useMemo(() => {
     if (!data?.by_status) return []
-    const corMap = Object.fromEntries(situacoes.items.map(s => [s.id, s.cor]))
-    return data.by_status.map(s => ({ ...s, color: corToHex(corMap[s.id] ?? '') }))
-  }, [data, situacoes.items])
+    return data.by_status.map(s => ({ ...s, color: corToHex(s.cor) }))
+  }, [data])
 
   const warrantyAlert = data ? (data.warranty?.expired ?? 0) + (data.warranty?.expiring_30 ?? 0) : null
 
@@ -561,11 +622,7 @@ export default function Reports() {
       {/* ── Content ───────────────────────────────────────────────────────── */}
       <div ref={chartsRef} className="flex-1 p-5 space-y-4">
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 text-sm text-red-700">
-            <strong>Erro ao carregar dados:</strong> {error}
-          </div>
-        )}
+
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
