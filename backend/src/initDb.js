@@ -172,6 +172,22 @@ async function initDb(pool) {
     ) lm ON lm.ativo_id = a.id AND lm.type = p.tipo
   `)
 
+  // ─── Migrações de colunas (idempotentes) ─────────────────────────────────
+
+  const addCol = (table, col, type) => pool.request().query(`
+    IF NOT EXISTS (
+      SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME = '${table}' AND COLUMN_NAME = '${col}'
+    ) ALTER TABLE ${table} ADD ${col} ${type}
+  `)
+
+  await addCol('setores',   'responsavel', 'NVARCHAR(255)')
+  await addCol('setores',   'ramal',       'NVARCHAR(50)')
+  await addCol('analistas', 'matricula',   'NVARCHAR(100)')
+  await addCol('marcas',    'segmento',    'NVARCHAR(100)')
+  await addCol('marcas',    'site',        'NVARCHAR(255)')
+  await addCol('marcas',    'observacoes', 'NVARCHAR(MAX)')
+
   // ─── Seed inicial ─────────────────────────────────────────────────────────
 
   await seedIfEmpty(pool)

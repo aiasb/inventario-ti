@@ -6,11 +6,11 @@ const { v4: uuidv4 } = require('uuid')
 // Definição de colunas aceitas por tabela (whitelist contra injeção)
 const TABLE_CONFIG = {
   responsaveis:        { cols: ['nome', 'email', 'telefone', 'setor'] },
-  setores:             { cols: ['nome', 'descricao'] },
+  setores:             { cols: ['nome', 'descricao', 'responsavel', 'ramal'] },
   categorias:          { cols: ['label', 'icon', 'color', 'descricao'] },
-  marcas:              { cols: ['nome'] },
+  marcas:              { cols: ['nome', 'segmento', 'site', 'observacoes'] },
   situacoes:           { cols: ['nome', 'descricao', 'cor'] },
-  analistas:           { cols: ['nome', 'email'] },
+  analistas:           { cols: ['nome', 'email', 'matricula'] },
   periodos_manutencao: { cols: ['tipo', 'dias'], intCols: ['dias'] },
 }
 
