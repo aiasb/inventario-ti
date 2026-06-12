@@ -103,7 +103,7 @@ export function AlertsProvider({ children }) {
     return assets
       .filter(a => a.status !== 'descartado' && a.warrantyExpiry)
       .flatMap(a => {
-        const exp = new Date(a.warrantyExpiry + 'T00:00:00')
+        const exp = new Date(a.warrantyExpiry.split('T')[0] + 'T00:00:00')
         if (exp > cutoff) return []
         const id = `warranty-${a.id}`
         if (dismissedIds.has(id)) return []
