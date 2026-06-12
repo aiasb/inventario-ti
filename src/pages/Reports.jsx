@@ -305,46 +305,34 @@ export default function Reports() {
   async function handleExportPDF() {
     if (!chartsRef.current || exportingPDF) return
     setExportingPDF(true)
-    const replaced = []
     try {
-      const html2canvas = (await import('html2canvas')).default
-      const { jsPDF }   = await import('jspdf')
+      const domtoimage = (await import('dom-to-image-more')).default
+      const { jsPDF }  = await import('jspdf')
 
-      const el = chartsRef.current
+      const el   = chartsRef.current
+      const rect = el.getBoundingClientRect()
 
-      // html2canvas doesn't render SVG — convert each SVG to a PNG img first
-      const svgs = el.querySelectorAll('svg')
-      for (const svg of svgs) {
-        const rect    = svg.getBoundingClientRect()
-        const svgStr  = new XMLSerializer().serializeToString(svg)
-        const blob    = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
-        const url     = URL.createObjectURL(blob)
-        const img     = document.createElement('img')
-        img.src    = url
-        img.width  = Math.round(rect.width)
-        img.height = Math.round(rect.height)
-        img.style.display = svg.style.display || 'block'
-        await new Promise(res => { img.onload = res; img.onerror = res; setTimeout(res, 500) })
-        svg.parentNode.replaceChild(img, svg)
-        replaced.push({ svg, img, url, parent: img.parentNode })
-      }
+      // dom-to-image-more renders via native browser engine — handles oklch + SVG correctly
+      const dataUrl = await domtoimage.toPng(el, {
+        scale: 2,
+        bgcolor: '#f1f5f9',
+        width:  rect.width,
+        height: rect.height,
+      })
 
-      const canvas  = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#f1f5f9', logging: false })
+      // Load image to get actual pixel dimensions
+      const img = new Image()
+      await new Promise(res => { img.onload = res; img.src = dataUrl })
+      const actualW = img.naturalWidth
+      const actualH = img.naturalHeight
 
-      // Restore SVGs
-      for (const { svg, img, url, parent } of replaced) {
-        parent.replaceChild(svg, img)
-        URL.revokeObjectURL(url)
-      }
-      replaced.length = 0
-
-      const pdf    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const pageW  = pdf.internal.pageSize.getWidth()
-      const pageH  = pdf.internal.pageSize.getHeight()
-      const margin = 10
-      const usableW = pageW - margin * 2
-      const ratio   = canvas.width / usableW
-      const date    = new Date().toLocaleDateString('pt-BR')
+      const pdf         = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pageW       = pdf.internal.pageSize.getWidth()
+      const pageH       = pdf.internal.pageSize.getHeight()
+      const margin      = 10
+      const usableW     = pageW - margin * 2
+      const pixPerMm    = actualW / usableW
+      const date        = new Date().toLocaleDateString('pt-BR')
 
       pdf.setFontSize(13)
       pdf.setTextColor(30, 41, 59)
@@ -353,26 +341,24 @@ export default function Reports() {
       pdf.setTextColor(100, 116, 139)
       pdf.text(`Gerado em ${date}${hasFilters ? ' · Filtros ativos' : ''}`, margin, margin + 12)
 
-      // Paginate the canvas
+      // Paginate
       let srcYpx = 0
       let firstPage = true
-      while (srcYpx < canvas.height) {
-        const availH  = pageH - margin - (firstPage ? margin + 18 : margin)
-        const yMm     = firstPage ? margin + 18 : margin
-        const sliceHpx = Math.min(Math.floor(availH * ratio), canvas.height - srcYpx)
+      while (srcYpx < actualH) {
+        const yMm      = firstPage ? margin + 18 : margin
+        const availHmm = pageH - yMm - margin
+        const sliceHpx = Math.min(Math.floor(availHmm * pixPerMm), actualH - srcYpx)
         if (sliceHpx <= 0) break
 
         const slice = document.createElement('canvas')
-        slice.width  = canvas.width
+        slice.width  = actualW
         slice.height = sliceHpx
-        slice.getContext('2d').drawImage(canvas, 0, srcYpx, canvas.width, sliceHpx, 0, 0, canvas.width, sliceHpx)
-
-        const sliceHmm = sliceHpx / ratio
-        pdf.addImage(slice.toDataURL('image/png'), 'PNG', margin, yMm, usableW, sliceHmm)
+        slice.getContext('2d').drawImage(img, 0, srcYpx, actualW, sliceHpx, 0, 0, actualW, sliceHpx)
+        pdf.addImage(slice.toDataURL('image/png'), 'PNG', margin, yMm, usableW, sliceHpx / pixPerMm)
 
         srcYpx += sliceHpx
         firstPage = false
-        if (srcYpx < canvas.height) pdf.addPage()
+        if (srcYpx < actualH) pdf.addPage()
       }
 
       const filename = `relatorio-ti-${new Date().toISOString().split('T')[0]}.pdf`
@@ -391,10 +377,6 @@ export default function Reports() {
     } catch (err) {
       console.error('PDF export error:', err)
       alert(`Erro ao gerar PDF: ${err.message}`)
-      // Restore SVGs if error happened mid-process
-      for (const { svg, img, url, parent } of replaced) {
-        try { parent.replaceChild(svg, img); URL.revokeObjectURL(url) } catch {}
-      }
     } finally {
       setExportingPDF(false)
     }
