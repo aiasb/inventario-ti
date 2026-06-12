@@ -680,7 +680,7 @@ export default function Reports() {
                       return (
                         <tr key={a.id} className="hover:bg-slate-50 transition-colors">
                           <td className="px-4 py-2.5 font-medium text-slate-700">{a.name}</td>
-                          <td className="px-4 py-2.5 text-slate-500">{a.category || '—'}</td>
+                          <td className="px-4 py-2.5 text-slate-500">{categorias.items.find(c => c.id === a.category)?.label ?? a.category ?? '—'}</td>
                           <td className="px-4 py-2.5 text-slate-500">{a.department || '—'}</td>
                           <td className="px-4 py-2.5">
                             {!exp ? <span className="text-slate-400">—</span> : (
