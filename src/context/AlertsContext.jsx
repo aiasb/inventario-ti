@@ -3,7 +3,6 @@ import { useAssets } from './AssetsContext'
 import { useMasterData } from './MasterDataContext'
 import { useAuth } from './AuthContext'
 import { fetchProximasManutencoes } from '../lib/api'
-import { supabase } from '../lib/supabase'
 
 export const ALERT_DEFAULTS = {
   warrantyEnabled:          true,
@@ -13,15 +12,8 @@ export const ALERT_DEFAULTS = {
   dismissReminderDays:      7,
 }
 
-function rowToConfig(row) {
-  return {
-    warrantyEnabled:          row.warranty_enabled,
-    warrantyDays:             row.warranty_days,
-    maintenanceEnabled:       row.maintenance_enabled,
-    disabledMaintenanceTypes: row.disabled_maintenance_types ?? [],
-    dismissReminderDays:      row.dismiss_reminder_days,
-  }
-}
+const CONFIG_KEY   = 'alert_config'
+const dismissed_key = (userId) => `alert_dismissed_${userId}`
 
 const AlertsContext = createContext(null)
 
@@ -30,34 +22,27 @@ export function AlertsProvider({ children }) {
   const { assets }             = useAssets()
   const { periodosManutencao } = useMasterData()
 
-  const [config, setConfig]         = useState({ ...ALERT_DEFAULTS })
-  const [dismissedRaw, setDismissedRaw] = useState([]) // { alert_id, dismissed_at }[]
-  const [maintenanceRows, setMaintenanceRows] = useState([])
+  const [config, setConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CONFIG_KEY)
+      return saved ? { ...ALERT_DEFAULTS, ...JSON.parse(saved) } : { ...ALERT_DEFAULTS }
+    } catch {
+      return { ...ALERT_DEFAULTS }
+    }
+  })
 
-  // Carrega config global
-  useEffect(() => {
-    supabase
-      .from('alert_config')
-      .select('*')
-      .eq('id', 1)
-      .single()
-      .then(({ data, error }) => {
-        if (error && error.code !== 'PGRST116') return // sem row = defaults
-        if (data) setConfig(rowToConfig(data))
-      })
-  }, [])
+  const [dismissedRaw, setDismissedRaw] = useState([])
+  const [maintenanceRows, setMaintenanceRows] = useState([])
 
   // Carrega dismissed do usuário logado
   useEffect(() => {
     if (!user?.id) { setDismissedRaw([]); return }
-    supabase
-      .from('alert_dismissed')
-      .select('alert_id, dismissed_at')
-      .eq('user_id', user.id)
-      .then(({ data, error }) => {
-        if (error) { console.error('alert_dismissed load:', error); return }
-        setDismissedRaw(data ?? [])
-      })
+    try {
+      const saved = localStorage.getItem(dismissed_key(user.id))
+      setDismissedRaw(saved ? JSON.parse(saved) : [])
+    } catch {
+      setDismissedRaw([])
+    }
   }, [user?.id])
 
   useEffect(() => {
@@ -66,10 +51,9 @@ export function AlertsProvider({ children }) {
       .catch(() => {})
   }, [])
 
-  // Filtra dispensados ainda dentro da janela de snooze
   const activeDismissed = useMemo(() => {
-    const now = Date.now()
-    const windowMs = config.dismissReminderDays * 86_400_000
+    const now       = Date.now()
+    const windowMs  = config.dismissReminderDays * 86_400_000
     return dismissedRaw.filter(d => {
       const expiresAt = new Date(d.dismissed_at).getTime() + windowMs
       return expiresAt > now
@@ -81,54 +65,27 @@ export function AlertsProvider({ children }) {
     [activeDismissed]
   )
 
-  // Salva config global (admin only via SECURITY DEFINER RPC)
+  function persistDismissed(userId, next) {
+    setDismissedRaw(next)
+    localStorage.setItem(dismissed_key(userId), JSON.stringify(next))
+  }
+
   async function saveConfig(patch) {
     const next = { ...config, ...patch }
-    setConfig(next) // optimistic
-    const { error } = await supabase.rpc('save_alert_config', {
-      p_warranty_enabled:            next.warrantyEnabled,
-      p_warranty_days:               next.warrantyDays,
-      p_maintenance_enabled:         next.maintenanceEnabled,
-      p_disabled_maintenance_types:  next.disabledMaintenanceTypes,
-      p_dismiss_reminder_days:       next.dismissReminderDays,
-    })
-    if (error) {
-      setConfig(config) // rollback
-      throw new Error(error.message)
-    }
+    setConfig(next)
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(next))
   }
 
   async function dismissAlert(id) {
     if (!user?.id) return
-    const now = new Date().toISOString()
-    setDismissedRaw(prev => {
-      const without = prev.filter(d => d.alert_id !== id)
-      return [...without, { alert_id: id, dismissed_at: now }]
-    })
-    const { error } = await supabase
-      .from('alert_dismissed')
-      .upsert(
-        { user_id: user.id, alert_id: id, dismissed_at: now },
-        { onConflict: 'user_id,alert_id' }
-      )
-    if (error) {
-      console.error('dismissAlert:', error)
-      setDismissedRaw(prev => prev.filter(d => d.alert_id !== id)) // rollback
-    }
+    const now     = new Date().toISOString()
+    const without = dismissedRaw.filter(d => d.alert_id !== id)
+    persistDismissed(user.id, [...without, { alert_id: id, dismissed_at: now }])
   }
 
   async function clearDismissed() {
     if (!user?.id) return
-    const backup = dismissedRaw
-    setDismissedRaw([]) // optimistic
-    const { error } = await supabase
-      .from('alert_dismissed')
-      .delete()
-      .eq('user_id', user.id)
-    if (error) {
-      console.error('clearDismissed:', error)
-      setDismissedRaw(backup) // rollback
-    }
+    persistDismissed(user.id, [])
   }
 
   const periodicTypes = useMemo(
@@ -199,7 +156,7 @@ export function AlertsProvider({ children }) {
       config,        saveConfig,
       allAlerts,     warrantyAlerts,  maintenanceAlerts,
       periodicTypes,
-      dismissed:     activeDismissed, // { alert_id, dismissed_at }[]
+      dismissed:     activeDismissed,
       dismissAlert,  clearDismissed,
     }}>
       {children}

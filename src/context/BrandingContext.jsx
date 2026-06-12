@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
 
 export const DEFAULTS = {
   companyName:     'Inventário TI',
@@ -8,45 +7,30 @@ export const DEFAULTS = {
   primaryColor:    '#3b82f6',
 }
 
-function rowToState(row) {
-  return {
-    companyName:     row.company_name     ?? DEFAULTS.companyName,
-    companySubtitle: row.company_subtitle ?? DEFAULTS.companySubtitle,
-    logoUrl:         row.logo_url         ?? null,
-    primaryColor:    row.primary_color    ?? DEFAULTS.primaryColor,
-  }
-}
+const STORAGE_KEY = 'branding_config'
 
 const BrandingContext = createContext(null)
 
 export function BrandingProvider({ children }) {
-  const [branding, setBranding] = useState({ ...DEFAULTS })
+  const [branding, setBranding] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : { ...DEFAULTS }
+    } catch {
+      return { ...DEFAULTS }
+    }
+  })
 
   useEffect(() => {
-    supabase
-      .from('branding')
-      .select('*')
-      .eq('id', 1)
-      .single()
-      .then(({ data, error }) => {
-        if (!error && data) setBranding(rowToState(data))
-      })
-  }, [])
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(branding))
+  }, [branding])
 
   async function saveBranding(patch) {
-    const next = { ...branding, ...patch }
-    const { error } = await supabase.rpc('save_branding', {
-      p_company_name:     next.companyName,
-      p_company_subtitle: next.companySubtitle,
-      p_logo_url:         next.logoUrl,
-      p_primary_color:    next.primaryColor,
-    })
-    if (error) throw new Error(error.message)
-    setBranding(next)
+    setBranding(prev => ({ ...prev, ...patch }))
   }
 
   async function resetBranding() {
-    await saveBranding({ ...DEFAULTS })
+    setBranding({ ...DEFAULTS })
   }
 
   return (

@@ -1,26 +1,32 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { Network } from '@capacitor/network'
 import { getQueue, dequeue, queueSize } from '../lib/offlineDB'
-import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/api-client'
 
 const OfflineContext = createContext(null)
 
 async function runQueueItem({ table, action, data, recordId }) {
-  if (action === 'insert') {
-    const { error } = await supabase.from(table).insert([data])
-    if (error) throw error
-  } else if (action === 'update') {
-    const { error } = await supabase.from(table).update(data).eq('id', recordId)
-    if (error) throw error
-  } else if (action === 'delete') {
-    const { error } = await supabase.from(table).delete().eq('id', recordId)
-    if (error) throw error
+  if (table === 'ativos') {
+    if (action === 'insert') {
+      await apiFetch('/api/ativos', { method: 'POST', body: JSON.stringify(data) })
+    } else if (action === 'update') {
+      await apiFetch(`/api/ativos/${recordId}`, { method: 'PUT', body: JSON.stringify(data) })
+    } else if (action === 'delete') {
+      await apiFetch(`/api/ativos/${recordId}`, { method: 'DELETE' })
+    }
+  } else if (table === 'manutencoes') {
+    if (action === 'insert') {
+      const { ativo_id, ...rest } = data
+      await apiFetch(`/api/ativos/${ativo_id}/manutencoes`, { method: 'POST', body: JSON.stringify(rest) })
+    } else if (action === 'delete') {
+      await apiFetch(`/api/manutencoes/${recordId}`, { method: 'DELETE' })
+    }
   }
 }
 
 export function OfflineProvider({ children }) {
-  const [isOnline, setIsOnline] = useState(true)
-  const [isSyncing, setIsSyncing] = useState(false)
+  const [isOnline,     setIsOnline]     = useState(true)
+  const [isSyncing,    setIsSyncing]    = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const busy = useRef(false)
 
@@ -34,7 +40,7 @@ export function OfflineProvider({ children }) {
     const n = await queueSize()
     if (n === 0) return
 
-    busy.current = true
+    busy.current  = true
     setIsSyncing(true)
 
     try {
@@ -64,15 +70,13 @@ export function OfflineProvider({ children }) {
       try {
         const status = await Network.getStatus()
         setIsOnline(status.connected)
-
         netListener = await Network.addListener('networkStatusChange', s => {
           setIsOnline(s.connected)
           if (s.connected) syncNow()
         })
       } catch {
-        // Fallback for web without Capacitor
         setIsOnline(navigator.onLine)
-        const up   = () => { setIsOnline(true);  syncNow() }
+        const up   = () => { setIsOnline(true); syncNow() }
         const down = () => setIsOnline(false)
         window.addEventListener('online',  up)
         window.addEventListener('offline', down)
@@ -80,10 +84,7 @@ export function OfflineProvider({ children }) {
     }
 
     init()
-
-    return () => {
-      netListener?.remove()
-    }
+    return () => { netListener?.remove() }
   }, []) // eslint-disable-line
 
   return (
