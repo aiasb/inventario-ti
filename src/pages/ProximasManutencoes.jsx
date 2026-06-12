@@ -48,7 +48,7 @@ function KpiCard({ label, value, icon: Icon, color, sub, onClick, active }) {
 }
 
 export default function ProximasManutencoes() {
-  const { periodosManutencao } = useMasterData()
+  const { periodosManutencao, categorias } = useMasterData()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -270,7 +270,9 @@ export default function ProximasManutencoes() {
                       <td className="px-4 py-3">
                         <p className="font-medium text-slate-800">{row.assetName}</p>
                         {row.assetCategory && (
-                          <p className="text-xs text-slate-400 capitalize mt-0.5">{row.assetCategory}</p>
+                          <p className="text-xs text-slate-400 capitalize mt-0.5">
+                            {categorias.items.find(c => c.id === row.assetCategory)?.label ?? row.assetCategory}
+                          </p>
                         )}
                       </td>
 
