@@ -156,6 +156,11 @@ export default function Reports() {
   const { categorias, situacoes, setores, periodosManutencao } = useMasterData()
   const { assets } = useAssets()
   const [filters, setFilters] = useState({ category: '', status: '', dept: '', warranty: '', manutLimpeza: '', manutFormatacao: '' })
+  const [customRanges, setCustomRanges] = useState({
+    warranty:      { from: '', to: '' },
+    manutLimpeza:  { from: '', to: '' },
+    manutFormatacao: { from: '', to: '' },
+  })
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -165,6 +170,21 @@ export default function Reports() {
   const limpezaPeriodo    = useMemo(() => periodosManutencao.items.find(p => normStr(p.tipo).includes('limpez')),  [periodosManutencao.items])
   const formatacaoPeriodo = useMemo(() => periodosManutencao.items.find(p => normStr(p.tipo).includes('format')), [periodosManutencao.items])
 
+  function getNextDueDate(asset, tipo, dias) {
+    const matches = (asset.maintenances ?? []).filter(m => m.type === tipo)
+    if (!matches.length) return null
+    const next = new Date(matches[0].date)
+    next.setDate(next.getDate() + dias)
+    return next
+  }
+
+  function inRange(date, from, to) {
+    if (!date) return false
+    if (from && date < new Date(from)) return false
+    if (to)   { const t = new Date(to); t.setHours(23,59,59,999); if (date > t) return false }
+    return true
+  }
+
   const filteredAssets = useMemo(() => {
     const { warranty, manutLimpeza, manutFormatacao } = filters
     if (!warranty && !manutLimpeza && !manutFormatacao) return null
@@ -173,23 +193,40 @@ export default function Reports() {
       if (warranty) {
         const exp = a.warrantyExpiry ? new Date(a.warrantyExpiry) : null
         if (!exp) return false
-        if (warranty === 'vencida'  && exp >= today) return false
-        if (warranty === 'a_vencer' && (exp < today || exp > in90)) return false
+        if (warranty === 'vencida'       && exp >= today) return false
+        if (warranty === 'a_vencer'      && (exp < today || exp > in90)) return false
+        if (warranty === 'personalizado' && !inRange(exp, customRanges.warranty.from, customRanges.warranty.to)) return false
       }
       if (manutLimpeza && limpezaPeriodo) {
-        if (getMaintenanceStatus(a, limpezaPeriodo.tipo, limpezaPeriodo.dias, today) !== manutLimpeza) return false
+        if (manutLimpeza === 'personalizado') {
+          const next = getNextDueDate(a, limpezaPeriodo.tipo, limpezaPeriodo.dias)
+          if (!inRange(next, customRanges.manutLimpeza.from, customRanges.manutLimpeza.to)) return false
+        } else {
+          if (getMaintenanceStatus(a, limpezaPeriodo.tipo, limpezaPeriodo.dias, today) !== manutLimpeza) return false
+        }
       }
       if (manutFormatacao && formatacaoPeriodo) {
-        if (getMaintenanceStatus(a, formatacaoPeriodo.tipo, formatacaoPeriodo.dias, today) !== manutFormatacao) return false
+        if (manutFormatacao === 'personalizado') {
+          const next = getNextDueDate(a, formatacaoPeriodo.tipo, formatacaoPeriodo.dias)
+          if (!inRange(next, customRanges.manutFormatacao.from, customRanges.manutFormatacao.to)) return false
+        } else {
+          if (getMaintenanceStatus(a, formatacaoPeriodo.tipo, formatacaoPeriodo.dias, today) !== manutFormatacao) return false
+        }
       }
       return true
     })
-  }, [assets, filters.warranty, filters.manutLimpeza, filters.manutFormatacao, limpezaPeriodo, formatacaoPeriodo, today])
+  }, [assets, filters.warranty, filters.manutLimpeza, filters.manutFormatacao,
+      customRanges, limpezaPeriodo, formatacaoPeriodo, today])
 
   function setFilter(key, val) { setFilters(prev => ({ ...prev, [key]: val })) }
-  function clearFilters() { setFilters({ category: '', status: '', dept: '', warranty: '', manutLimpeza: '', manutFormatacao: '' }) }
+  function setRange(key, field, val) { setCustomRanges(prev => ({ ...prev, [key]: { ...prev[key], [field]: val } })) }
+  function clearFilters() {
+    setFilters({ category: '', status: '', dept: '', warranty: '', manutLimpeza: '', manutFormatacao: '' })
+    setCustomRanges({ warranty: { from: '', to: '' }, manutLimpeza: { from: '', to: '' }, manutFormatacao: { from: '', to: '' } })
+  }
 
   const hasFilters = Object.values(filters).some(Boolean)
+  const hasCustom  = filters.warranty === 'personalizado' || filters.manutLimpeza === 'personalizado' || filters.manutFormatacao === 'personalizado'
 
   useEffect(() => {
     let cancelled = false
@@ -298,20 +335,23 @@ export default function Reports() {
 
           <select value={filters.warranty} onChange={e => setFilter('warranty', e.target.value)} className={selectClass}>
             <option value="">Garantia — todas</option>
-            <option value="a_vencer">Garantia a vencer (≤90d)</option>
-            <option value="vencida">Garantia vencida</option>
+            <option value="a_vencer">A vencer (≤90d)</option>
+            <option value="vencida">Vencida</option>
+            <option value="personalizado">Período personalizado</option>
           </select>
 
           <select value={filters.manutLimpeza} onChange={e => setFilter('manutLimpeza', e.target.value)} className={selectClass} disabled={!limpezaPeriodo}>
             <option value="">Limpeza — todas</option>
-            <option value="a_vencer">Limpeza a vencer</option>
-            <option value="vencida">Limpeza vencida</option>
+            <option value="a_vencer">A vencer (≤30d)</option>
+            <option value="vencida">Vencida</option>
+            <option value="personalizado">Período personalizado</option>
           </select>
 
           <select value={filters.manutFormatacao} onChange={e => setFilter('manutFormatacao', e.target.value)} className={selectClass} disabled={!formatacaoPeriodo}>
             <option value="">Formatação — todas</option>
-            <option value="a_vencer">Formatação a vencer</option>
-            <option value="vencida">Formatação vencida</option>
+            <option value="a_vencer">A vencer (≤30d)</option>
+            <option value="vencida">Vencida</option>
+            <option value="personalizado">Período personalizado</option>
           </select>
 
           {hasFilters && (
@@ -322,6 +362,84 @@ export default function Reports() {
 
           {loading && <RefreshCw size={13} className="text-blue-400 animate-spin ml-auto" />}
         </div>
+
+        {/* Date range row — appears when any filter is "personalizado" */}
+        {hasCustom && (
+          <div className="bg-slate-700/40 border-t border-slate-600/40 px-4 py-3 flex flex-wrap gap-4">
+            {filters.warranty === 'personalizado' && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-300 shrink-0">Garantia:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-400">De</span>
+                  <input
+                    type="date"
+                    value={customRanges.warranty.from}
+                    onChange={e => setRange('warranty', 'from', e.target.value)}
+                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                  <span className="text-[10px] text-slate-400">Até</span>
+                  <input
+                    type="date"
+                    value={customRanges.warranty.to}
+                    onChange={e => setRange('warranty', 'to', e.target.value)}
+                    min={customRanges.warranty.from || undefined}
+                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+              </div>
+            )}
+
+            {filters.manutLimpeza === 'personalizado' && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-300 shrink-0">
+                  {limpezaPeriodo?.tipo ?? 'Limpeza'} (próx.):
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-400">De</span>
+                  <input
+                    type="date"
+                    value={customRanges.manutLimpeza.from}
+                    onChange={e => setRange('manutLimpeza', 'from', e.target.value)}
+                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                  <span className="text-[10px] text-slate-400">Até</span>
+                  <input
+                    type="date"
+                    value={customRanges.manutLimpeza.to}
+                    onChange={e => setRange('manutLimpeza', 'to', e.target.value)}
+                    min={customRanges.manutLimpeza.from || undefined}
+                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+              </div>
+            )}
+
+            {filters.manutFormatacao === 'personalizado' && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-300 shrink-0">
+                  {formatacaoPeriodo?.tipo ?? 'Formatação'} (próx.):
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-400">De</span>
+                  <input
+                    type="date"
+                    value={customRanges.manutFormatacao.from}
+                    onChange={e => setRange('manutFormatacao', 'from', e.target.value)}
+                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                  <span className="text-[10px] text-slate-400">Até</span>
+                  <input
+                    type="date"
+                    value={customRanges.manutFormatacao.to}
+                    onChange={e => setRange('manutFormatacao', 'to', e.target.value)}
+                    min={customRanges.manutFormatacao.from || undefined}
+                    className="text-xs bg-slate-600 border border-slate-500 text-white rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Content ───────────────────────────────────────────────────────── */}
