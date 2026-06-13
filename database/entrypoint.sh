@@ -13,6 +13,8 @@
 
 set -e
 
+mkdir -p /var/opt/mssql/backup
+
 SQLCMD="/opt/mssql-tools18/bin/sqlcmd"
 BAK="/var/opt/mssql/backup/inventario_ti.bak"
 DB="inventario_ti"
