@@ -5,6 +5,12 @@ const { v4: uuidv4 } = require('uuid')
 
 const router = express.Router()
 
+function toDateStr(val) {
+  if (!val) return null
+  if (val instanceof Date) return val.toISOString().split('T')[0]
+  return String(val).split('T')[0]
+}
+
 function dbToAsset(row) {
   return {
     id:             row.id,
@@ -18,8 +24,8 @@ function dbToAsset(row) {
     assignedTo:     row.assigned_to,
     memory:         row.memory,
     storage:        row.storage,
-    purchaseDate:   row.purchase_date,
-    warrantyExpiry: row.warranty_expiry,
+    purchaseDate:   toDateStr(row.purchase_date),
+    warrantyExpiry: toDateStr(row.warranty_expiry),
     location:       row.location,
     notes:          row.notes,
   }
@@ -31,7 +37,7 @@ function dbToMaintenance(row) {
     type:        row.type,
     description: row.description,
     analyst:     row.analyst,
-    date:        row.date,
+    date:        toDateStr(row.date),
     cost:        row.cost,
     status:      row.status,
     resolution:  row.resolution,

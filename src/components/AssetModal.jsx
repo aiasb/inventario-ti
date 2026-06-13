@@ -172,7 +172,7 @@ export default function AssetModal({ asset: assetProp, onClose, onEdit }) {
   const isDescartado = asset.status === 'descartado'
 
   const status = situacoes.items.find(s => s.id === asset.status)
-  const category = categorias.items.find(c => c.id === asset.category)
+  const category = categorias.items.find(c => c.id?.toLowerCase() === asset.category?.toLowerCase())
   const maintenances = [...(asset.maintenances ?? [])].sort(
     (a, b) => new Date(b.date) - new Date(a.date)
   )

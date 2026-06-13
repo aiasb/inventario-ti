@@ -271,7 +271,7 @@ export default function ProximasManutencoes() {
                         <p className="font-medium text-slate-800">{row.assetName}</p>
                         {row.assetCategory && (
                           <p className="text-xs text-slate-400 capitalize mt-0.5">
-                            {categorias.items.find(c => c.id === row.assetCategory)?.label ?? row.assetCategory}
+                            {categorias.items.find(c => c.id?.toLowerCase() === row.assetCategory?.toLowerCase())?.label ?? row.assetCategory}
                           </p>
                         )}
                       </td>

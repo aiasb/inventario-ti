@@ -55,7 +55,7 @@ function StatusBadge({ statusId, situacoesItems }) {
 }
 
 function CategoryBadge({ category, categorias }) {
-  const cat = categorias.find(c => c.id === category)
+  const cat = categorias.find(c => c.id?.toLowerCase() === category?.toLowerCase())
   const Icon = resolveIcon(cat?.icon)
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${cat?.color ?? 'bg-slate-100 text-slate-600'}`}>
@@ -161,7 +161,7 @@ export default function Assets() {
     ]
 
     const rows = filtered.map(a => {
-      const cat  = categorias.items.find(c => c.id === a.category)?.label || a.category
+      const cat  = categorias.items.find(c => c.id?.toLowerCase() === a.category?.toLowerCase())?.label || a.category
       const stat = situacoes.items.find(s => s.id === a.status)?.nome || a.status
       const manutCols = periodos.map(p => {
         const last = (a.maintenances ?? [])
@@ -504,7 +504,7 @@ export default function Assets() {
               Nenhum ativo encontrado
             </div>
           ) : filtered.map(asset => {
-            const cat = categorias.items.find(c => c.id === asset.category)
+            const cat = categorias.items.find(c => c.id?.toLowerCase() === asset.category?.toLowerCase())
             const Icon = resolveIcon(cat?.icon)
             return (
               <div key={asset.id} className={`bg-white rounded-2xl border shadow-sm p-4 hover:shadow-md transition-shadow ${asset._pending ? 'border-amber-200' : 'border-slate-100'}`}>
