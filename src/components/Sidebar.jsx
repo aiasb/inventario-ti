@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Package, BarChart3, Settings,
-  Monitor, ChevronLeft, ChevronRight, Users, Wrench,
+  ChevronLeft, ChevronRight, Users, Wrench,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useBranding } from '../context/BrandingContext'
+import logoImg from '../assets/logo-cacu.png'
 
 const navItems = [
   { to: '/',            icon: LayoutDashboard, label: 'Dashboard' },
@@ -21,7 +22,7 @@ export default function Sidebar() {
   const { branding } = useBranding()
   const isAdmin = profile?.role === 'admin'
 
-  const { primaryColor, companyName, companySubtitle, logoUrl } = branding
+  const { primaryColor, companyName, companySubtitle } = branding
 
   function activeStyle({ isActive }) {
     return isActive ? { backgroundColor: primaryColor } : undefined
@@ -41,16 +42,7 @@ export default function Sidebar() {
     >
       {/* Logo / Brand */}
       <div className={`flex items-center gap-3 px-4 py-5 border-b border-slate-700/60 ${collapsed ? 'justify-center' : ''}`}>
-        {logoUrl ? (
-          <img src={logoUrl} alt="Logo" className="w-9 h-9 object-contain shrink-0" />
-        ) : (
-          <div
-            className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0"
-            style={{ backgroundColor: primaryColor }}
-          >
-            <Monitor size={18} className="text-white" />
-          </div>
-        )}
+        <img src={logoImg} alt="Logo" className="w-9 h-9 object-contain shrink-0 rounded-xl" />
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white leading-tight truncate">{companyName}</p>

@@ -3,7 +3,6 @@ import { createContext, useContext, useState, useEffect } from 'react'
 export const DEFAULTS = {
   companyName:     'Inventário TI',
   companySubtitle: 'Gestão de Ativos',
-  logoUrl:         null,
   primaryColor:    '#3b82f6',
 }
 

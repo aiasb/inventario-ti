@@ -1,14 +1,15 @@
 import { useState } from 'react'
-import { Monitor, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, UserPlus, LogIn, Wifi, ChevronDown, CheckCircle2 } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, UserPlus, LogIn, Wifi, ChevronDown, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useBranding } from '../context/BrandingContext'
 import { usePlatform } from '../hooks/usePlatform'
 import { getServerUrl, setServerUrl } from '../lib/api-client'
+import logoImg from '../assets/logo-cacu.png'
 
 export default function Login() {
   const { signIn, signUp } = useAuth()
   const { branding } = useBranding()
-  const { companyName, companySubtitle, logoUrl, primaryColor } = branding
+  const { companyName, companySubtitle, primaryColor } = branding
   const { isAndroid } = usePlatform()
 
   const [mode, setMode] = useState('login') // 'login' | 'register'
@@ -114,16 +115,7 @@ export default function Login() {
           {/* Mobile logo */}
           {!isAndroid && (
             <div className="flex items-center gap-3 mb-8 lg:hidden">
-              {logoUrl ? (
-                <img src={logoUrl} alt={companyName} className="h-10 w-auto object-contain" />
-              ) : (
-                <>
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: primaryColor }}>
-                    <Monitor size={20} className="text-white" />
-                  </div>
-                  <p className="text-white font-semibold text-lg">{companyName}</p>
-                </>
-              )}
+              <img src={logoImg} alt={companyName} className="h-10 w-auto object-contain" />
             </div>
           )}
 
@@ -132,13 +124,7 @@ export default function Login() {
 
             {/* Logo */}
             <div className="flex flex-col items-center mb-7">
-              {logoUrl ? (
-                <img src={logoUrl} alt={companyName} className="h-20 w-auto object-contain mb-5" />
-              ) : (
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5" style={{ backgroundColor: primaryColor }}>
-                  <Monitor size={28} className="text-white" />
-                </div>
-              )}
+              <img src={logoImg} alt={companyName} className="h-20 w-auto object-contain mb-5" />
               <h2 className="text-xl font-bold text-white">
                 {mode === 'login' ? 'Acessar conta' : 'Criar conta'}
               </h2>

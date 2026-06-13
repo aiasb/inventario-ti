@@ -23,7 +23,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="flex bg-white border-t border-slate-200 shrink-0"
+      className="flex bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shrink-0"
       style={{ paddingBottom: 'var(--sab)' }}
     >
       {items.map(({ to, icon: Icon, label, exact }) => (

@@ -106,9 +106,8 @@ export default function Dashboard() {
       .filter(c => c.count > 0)
       .sort((a, b) => b.count - a.count)
 
-    const inUseStatus = situacoes.items.find(s => s.id === 'em_uso' || s.nome?.toLowerCase().includes('uso'))
-    const inUseStatusId = inUseStatus?.id ?? 'em_uso'
-    const inUseCount = ativos.filter(a => a.status === inUseStatusId).length
+    const inUseStatusId = situacoes.items.find(s => s.nome?.toLowerCase().includes('uso'))?.id ?? null
+    const inUseCount = inUseStatusId ? ativos.filter(a => a.status === inUseStatusId).length : 0
 
     const withWarranty = ativos
       .filter(a => a.warrantyExpiry)

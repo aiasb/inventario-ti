@@ -34,7 +34,7 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
-    restart: on-failure:5
+    restart: unless-stopped
 
   frontend:
     build:
@@ -46,6 +46,7 @@ services:
       - "80:80"
     depends_on:
       - backend
+    restart: unless-stopped
 
 volumes:
   sqlserver_data:

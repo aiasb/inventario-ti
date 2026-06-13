@@ -8,6 +8,7 @@ import {
   AreaChart, Area,
 } from 'recharts'
 import { RefreshCw, X, Download, Package, Wrench, Shield, AlertTriangle, FileText, Loader2 } from 'lucide-react'
+import DatePicker from '../components/DatePicker'
 import { exportCSV } from '../lib/exportCSV'
 import { Capacitor } from '@capacitor/core'
 
@@ -544,73 +545,76 @@ export default function Reports() {
         {hasCustom && (
           <div className="bg-slate-100 border-t border-slate-200 px-4 py-3 flex flex-wrap gap-4">
             {filters.warranty === 'personalizado' && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-600 shrink-0">Garantia:</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 shrink-0">Garantia:</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-slate-500">De</span>
-                  <input
-                    type="date"
+                  <DatePicker
+                    compact
                     value={customRanges.warranty.from}
-                    onChange={e => setRange('warranty', 'from', e.target.value)}
-                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    onChange={v => setRange('warranty', 'from', v)}
+                    placeholder="De"
+                    clearable={!!customRanges.warranty.from}
                   />
                   <span className="text-[10px] text-slate-500">Até</span>
-                  <input
-                    type="date"
+                  <DatePicker
+                    compact
                     value={customRanges.warranty.to}
-                    onChange={e => setRange('warranty', 'to', e.target.value)}
-                    min={customRanges.warranty.from || undefined}
-                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    onChange={v => setRange('warranty', 'to', v)}
+                    placeholder="Até"
+                    clearable={!!customRanges.warranty.to}
                   />
                 </div>
               </div>
             )}
 
             {filters.manutLimpeza === 'personalizado' && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-600 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 shrink-0">
                   {limpezaPeriodo?.tipo ?? 'Limpeza'} (próx.):
                 </span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-slate-500">De</span>
-                  <input
-                    type="date"
+                  <DatePicker
+                    compact
                     value={customRanges.manutLimpeza.from}
-                    onChange={e => setRange('manutLimpeza', 'from', e.target.value)}
-                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    onChange={v => setRange('manutLimpeza', 'from', v)}
+                    placeholder="De"
+                    clearable={!!customRanges.manutLimpeza.from}
                   />
                   <span className="text-[10px] text-slate-500">Até</span>
-                  <input
-                    type="date"
+                  <DatePicker
+                    compact
                     value={customRanges.manutLimpeza.to}
-                    onChange={e => setRange('manutLimpeza', 'to', e.target.value)}
-                    min={customRanges.manutLimpeza.from || undefined}
-                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    onChange={v => setRange('manutLimpeza', 'to', v)}
+                    placeholder="Até"
+                    clearable={!!customRanges.manutLimpeza.to}
                   />
                 </div>
               </div>
             )}
 
             {filters.manutFormatacao === 'personalizado' && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-600 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 shrink-0">
                   {formatacaoPeriodo?.tipo ?? 'Formatação'} (próx.):
                 </span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-slate-500">De</span>
-                  <input
-                    type="date"
+                  <DatePicker
+                    compact
                     value={customRanges.manutFormatacao.from}
-                    onChange={e => setRange('manutFormatacao', 'from', e.target.value)}
-                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    onChange={v => setRange('manutFormatacao', 'from', v)}
+                    placeholder="De"
+                    clearable={!!customRanges.manutFormatacao.from}
                   />
                   <span className="text-[10px] text-slate-500">Até</span>
-                  <input
-                    type="date"
+                  <DatePicker
+                    compact
                     value={customRanges.manutFormatacao.to}
-                    onChange={e => setRange('manutFormatacao', 'to', e.target.value)}
-                    min={customRanges.manutFormatacao.from || undefined}
-                    className="text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-400"
+                    onChange={v => setRange('manutFormatacao', 'to', v)}
+                    placeholder="Até"
+                    clearable={!!customRanges.manutFormatacao.to}
                   />
                 </div>
               </div>

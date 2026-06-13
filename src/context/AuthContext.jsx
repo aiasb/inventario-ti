@@ -1,6 +1,16 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { apiFetch, setToken, getToken } from '../lib/api-client'
 
+const AUTH_PROFILE_KEY = 'cached_auth_profile'
+
+function loadCachedProfile() {
+  try { return JSON.parse(localStorage.getItem(AUTH_PROFILE_KEY)) } catch { return null }
+}
+function saveCachedProfile(u) {
+  if (u) localStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(u))
+  else    localStorage.removeItem(AUTH_PROFILE_KEY)
+}
+
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
@@ -12,9 +22,17 @@ export function AuthProvider({ children }) {
     const token = getToken()
     if (!token) { setLoading(false); return }
 
+    // Restore cached profile immediately so offline startup works
+    const cached = loadCachedProfile()
+    if (cached) { setUser(cached); setProfile(cached) }
+
     apiFetch('/api/auth/me')
-      .then(u => { setUser(u); setProfile(u) })
-      .catch(() => { setToken(null) })
+      .then(u => { setUser(u); setProfile(u); saveCachedProfile(u) })
+      .catch(err => {
+        // Network error (offline) → keep cached session; auth error → clear
+        const isAuthError = /401|403|HTTP 4/.test(err.message)
+        if (isAuthError) { setToken(null); saveCachedProfile(null); setUser(null); setProfile(null) }
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -26,6 +44,8 @@ export function AuthProvider({ children }) {
     setToken(token)
     setUser(user)
     setProfile(user)
+    saveCachedProfile(user)
+    window.dispatchEvent(new CustomEvent('auth:signed-in'))
   }
 
   async function signUp(email, password, fullName) {
@@ -36,12 +56,15 @@ export function AuthProvider({ children }) {
     setToken(token)
     setUser(user)
     setProfile(user)
+    saveCachedProfile(user)
+    window.dispatchEvent(new CustomEvent('auth:signed-in'))
   }
 
   async function signOut() {
     setToken(null)
     setUser(null)
     setProfile(null)
+    saveCachedProfile(null)
   }
 
   async function updateProfile(updates) {
@@ -51,6 +74,7 @@ export function AuthProvider({ children }) {
     })
     setProfile(updated)
     setUser(updated)
+    saveCachedProfile(updated)
     return updated
   }
 

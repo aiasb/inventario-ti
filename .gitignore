@@ -32,3 +32,16 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Android build outputs & signing keys
+*.jks
+*.keystore
+android/app/release/
+android/app/build/
+android/.gradle/
+
+# Generated helper scripts
+generate_icons.py
+
+# Database backups (binary, track via restore.sql + restore.sh only)
+database/*.bak

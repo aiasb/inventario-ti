@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Users, Shield, Mail, Edit2, Loader2, Search, X, Save, AlertCircle, CheckCircle2, Lock, Database, Trash2, ImageIcon, Monitor, RotateCcw, Paintbrush, BellRing, ShieldOff, Wrench, Clock, TriangleAlert, Wifi } from 'lucide-react'
+import { Users, Shield, Mail, Edit2, Loader2, Search, X, Save, AlertCircle, CheckCircle2, Lock, Database, Trash2, Monitor, RotateCcw, Paintbrush, BellRing, ShieldOff, Wrench, Clock, TriangleAlert, Wifi } from 'lucide-react'
+import logoImg from '../assets/logo-cacu.png'
 import CadastrosBase from './Cadastros'
 import { useBranding, DEFAULTS } from '../context/BrandingContext'
 import { useAlerts } from '../context/AlertsContext'
@@ -34,30 +35,13 @@ function BrandingTab() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const [logoError, setLogoError] = useState('')
-  const logoInputRef = useRef(null)
 
-  // Sync form when branding loads from Supabase
   useEffect(() => {
     setForm({ ...branding })
-  }, [branding.companyName, branding.primaryColor, branding.logoUrl, branding.companySubtitle]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [branding.companyName, branding.primaryColor, branding.companySubtitle]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function patch(key, value) {
     setForm(prev => ({ ...prev, [key]: value }))
-  }
-
-  function handleLogoUpload(e) {
-    setLogoError('')
-    const file = e.target.files[0]
-    if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      setLogoError('A imagem deve ter no máximo 2 MB.')
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = ev => patch('logoUrl', ev.target.result)
-    reader.readAsDataURL(file)
-    e.target.value = ''
   }
 
   async function handleSave() {
@@ -96,82 +80,34 @@ function BrandingTab() {
       {/* Identity */}
       <section>
         <h3 className="text-sm font-semibold text-slate-700 mb-1">Identidade da Empresa</h3>
-        <p className="text-xs text-slate-400 mb-5">Nome, subtítulo e logotipo exibidos na barra lateral.</p>
+        <p className="text-xs text-slate-400 mb-5">Nome e subtítulo exibidos na barra lateral.</p>
 
-        <div className="flex items-start gap-6">
-          {/* Logo uploader */}
-          <div className="flex flex-col items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => logoInputRef.current?.click()}
-              className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden bg-slate-50 hover:border-blue-400 hover:bg-blue-50/50 transition-colors group"
-            >
-              {form.logoUrl ? (
-                <img src={form.logoUrl} alt="Logo" className="w-full h-full object-contain p-1.5" />
-              ) : (
-                <div className="flex flex-col items-center gap-1 text-slate-300 group-hover:text-blue-400 transition-colors">
-                  <ImageIcon size={26} />
-                  <span className="text-[9px] font-semibold uppercase tracking-wider">Logo</span>
-                </div>
-              )}
-            </button>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              Nome da Empresa
+            </label>
             <input
-              ref={logoInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleLogoUpload}
+              type="text"
+              value={form.companyName}
+              onChange={e => patch('companyName', e.target.value)}
+              maxLength={40}
+              placeholder={DEFAULTS.companyName}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-400 transition-colors"
             />
-            <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={() => logoInputRef.current?.click()}
-                className="text-[11px] text-blue-500 hover:text-blue-700 px-2 py-1 hover:bg-blue-50 rounded-lg transition-colors font-medium"
-              >
-                Enviar
-              </button>
-              {form.logoUrl && (
-                <button
-                  type="button"
-                  onClick={() => patch('logoUrl', null)}
-                  className="text-[11px] text-red-400 hover:text-red-600 px-2 py-1 hover:bg-red-50 rounded-lg transition-colors font-medium"
-                >
-                  Remover
-                </button>
-              )}
-            </div>
-            {logoError && <p className="text-[10px] text-red-500 text-center max-w-[80px]">{logoError}</p>}
-            <p className="text-[10px] text-slate-400 text-center">PNG, SVG ou JPG<br />Máx. 2 MB</p>
           </div>
-
-          {/* Name fields */}
-          <div className="flex-1 space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-                Nome da Empresa
-              </label>
-              <input
-                type="text"
-                value={form.companyName}
-                onChange={e => patch('companyName', e.target.value)}
-                maxLength={40}
-                placeholder={DEFAULTS.companyName}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-400 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-                Subtítulo
-              </label>
-              <input
-                type="text"
-                value={form.companySubtitle}
-                onChange={e => patch('companySubtitle', e.target.value)}
-                maxLength={40}
-                placeholder={DEFAULTS.companySubtitle}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-400 transition-colors"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              Subtítulo
+            </label>
+            <input
+              type="text"
+              value={form.companySubtitle}
+              onChange={e => patch('companySubtitle', e.target.value)}
+              maxLength={40}
+              placeholder={DEFAULTS.companySubtitle}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-400 transition-colors"
+            />
           </div>
         </div>
       </section>
@@ -228,16 +164,7 @@ function BrandingTab() {
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Pré-visualização</p>
           <div className="flex items-center gap-3 mb-3">
-            {form.logoUrl ? (
-              <img src={form.logoUrl} alt="" className="w-9 h-9 object-contain shrink-0" />
-            ) : (
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ backgroundColor: form.primaryColor }}
-              >
-                <Monitor size={16} className="text-white" />
-              </div>
-            )}
+            <img src={logoImg} alt="Logo" className="w-9 h-9 object-contain shrink-0 rounded-xl" />
             <div>
               <p className="text-sm font-semibold text-slate-800 leading-tight">
                 {form.companyName || DEFAULTS.companyName}
@@ -739,14 +666,14 @@ export default function Settings() {
 
       {/* Tabs — Android: floating pill sticky / Desktop: underline */}
       {isAndroid ? (
-        <div className="sticky top-0 z-20 px-3 pt-3 pb-2 bg-slate-50/95 backdrop-blur-sm shrink-0">
-          <div className="flex gap-1.5 overflow-x-auto bg-white rounded-2xl shadow-sm border border-slate-100 p-1" style={{ scrollbarWidth: 'none' }}>
+        <div className="sticky top-0 z-20 px-3 pt-3 pb-2 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-sm shrink-0">
+          <div className="flex gap-1.5 overflow-x-auto bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-1" style={{ scrollbarWidth: 'none' }}>
             {TABS.map(({ id, icon: Icon, shortLabel }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
                 className={`flex-none flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                  activeTab === id ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-500'
+                  activeTab === id ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
                 <Icon size={15} />
@@ -1079,38 +1006,39 @@ export default function Settings() {
       {activeTab === 'sistema' && (
         <div className="space-y-4">
 
-          {/* Servidor da API */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
-            <div className="flex items-start gap-3">
-              <Wifi size={18} className="text-blue-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-slate-700">Servidor da API</p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  No Android, informe o IP da máquina na rede local (ex: http://192.168.1.10).
-                  Deixe em branco para usar URL relativa (web/Docker).
-                </p>
+          {/* Servidor da API — só no Android */}
+          {isAndroid && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <Wifi size={18} className="text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">Servidor da API</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Informe o IP da máquina na rede local (ex: http://192.168.1.10).
+                  </p>
+                </div>
               </div>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={serverUrlInput}
+                  onChange={e => setServerUrlInput(e.target.value)}
+                  placeholder="http://192.168.1.x"
+                  className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-400 transition-colors"
+                />
+                <button
+                  onClick={handleSaveServerUrl}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors"
+                >
+                  {serverUrlSaved ? <CheckCircle2 size={14} /> : <Save size={14} />}
+                  {serverUrlSaved ? 'Salvo!' : 'Salvar'}
+                </button>
+              </div>
+              {serverUrlSaved && (
+                <p className="text-xs text-emerald-600">URL salva. Feche e reabra o app para aplicar.</p>
+              )}
             </div>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={serverUrlInput}
-                onChange={e => setServerUrlInput(e.target.value)}
-                placeholder="http://192.168.1.x"
-                className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-400 transition-colors"
-              />
-              <button
-                onClick={handleSaveServerUrl}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors"
-              >
-                {serverUrlSaved ? <CheckCircle2 size={14} /> : <Save size={14} />}
-                {serverUrlSaved ? 'Salvo!' : 'Salvar'}
-              </button>
-            </div>
-            {serverUrlSaved && (
-              <p className="text-xs text-emerald-600">URL salva. Feche e reabra o app para aplicar.</p>
-            )}
-          </div>
+          )}
 
           {!isAdmin ? (
             <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-xl">

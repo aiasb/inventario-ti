@@ -11,7 +11,7 @@ export default function Layout() {
   if (isAndroid) {
     return (
       <div
-        className="flex flex-col bg-slate-50 overflow-hidden"
+        className="flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden"
         style={{
           height:     '100dvh',
           paddingTop: 'var(--sat)',   // empurra conteúdo abaixo da status bar
@@ -29,7 +29,7 @@ export default function Layout() {
 
   /* Layout Desktop — sem alteração */
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header />

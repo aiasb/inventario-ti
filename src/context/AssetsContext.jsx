@@ -46,11 +46,23 @@ export function AssetsProvider({ children, onReady, onError }) {
       }
     } catch (_) {}
 
-    // 2. Refresh from Supabase in background
+    // 2. Refresh from server in background
     try {
       const fresh = await fetchAtivos()
-      setAssets(fresh)
-      cacheAll('assets', fresh)
+      // Preserve pending (not-yet-synced) maintenances so they stay visible
+      // while they're still waiting in the sync queue.
+      // Exclude pending items whose ID already exists on the server (already synced).
+      const withPending = fresh.map(serverAsset => {
+        const local = assetsRef.current.find(a => a.id === serverAsset.id)
+        if (!local) return serverAsset
+        const serverMaints = serverAsset.maintenances ?? []
+        const serverIds = new Set(serverMaints.map(m => m.id))
+        const pendingMaints = (local.maintenances ?? []).filter(m => m._pending && !serverIds.has(m.id))
+        if (pendingMaints.length === 0) return serverAsset
+        return { ...serverAsset, maintenances: [...serverMaints, ...pendingMaints] }
+      })
+      setAssets(withPending)
+      cacheAll('assets', withPending)
       setLoading(false)
       onReady?.()
     } catch (err) {
