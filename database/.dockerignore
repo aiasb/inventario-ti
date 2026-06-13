@@ -1,0 +1,5 @@
+*.bak
+*.sql
+*.sh.bak
+restore.sh
+restore.sql

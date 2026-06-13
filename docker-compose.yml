@@ -1,6 +1,7 @@
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    build:
+      context: ./database
     container_name: inventario-sqlserver
     environment:
       ACCEPT_EULA: "Y"
@@ -10,12 +11,16 @@ services:
       - "1433:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
+      # Monta o backup como somente-leitura para importação automática.
+      # Remova esta linha se não quiser restaurar (o backend criará o schema).
+      - ./database/inventario_ti.bak:/var/opt/mssql/backup/inventario_ti.bak:ro
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'Inventario@2024' -Q 'SELECT 1' -C -N 2>/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
-      start_period: 30s
+      start_period: 60s
+    restart: unless-stopped
 
   backend:
     build:
