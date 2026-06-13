@@ -25,12 +25,12 @@ export default function Responsaveis() {
   return (
     <div className="p-6">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-          <Users size={20} className="text-blue-500" />
+        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+          <Users size={20} className="text-blue-500 dark:text-blue-400" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Gestão de Responsáveis</h2>
-          <p className="text-sm text-slate-500">Pessoas que podem ser atribuídas aos ativos de TI</p>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Gestão de Responsáveis</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Pessoas que podem ser atribuídas aos ativos de TI</p>
         </div>
       </div>
 

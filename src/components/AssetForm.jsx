@@ -264,8 +264,6 @@ export default function AssetForm({ asset, onClose }) {
     const e = {}
     if (!form.name.trim()) e.name = 'Hostname obrigatório'
     if (!form.serialNumber.trim()) e.serialNumber = 'Serial obrigatório'
-    console.log('[validate] situacoes:', situacoes.items.map(s => `${s.nome}(${s.id})`))
-    console.log('[validate] emUsoId:', emUsoId, '| form.status:', form.status, '| form.assignedTo:', JSON.stringify(form.assignedTo))
     if (emUsoId && form.status === emUsoId && !form.assignedTo) e.assignedTo = 'Responsável obrigatório quando em uso'
     return e
   }
