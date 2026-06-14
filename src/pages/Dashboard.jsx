@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useAssets } from '../context/AssetsContext'
 import { useMasterData } from '../context/MasterDataContext'
+import { useTheme } from '../context/ThemeContext'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -16,11 +17,11 @@ const PALETTE = ['#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#06b6d4', '#f59e0b
 function TooltipContent({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-lg px-3 py-2.5 text-sm">
-      {label && <p className="text-xs font-semibold text-slate-500 mb-1.5">{label}</p>}
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg px-3 py-2.5 text-sm">
+      {label && <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">{label}</p>}
       {payload.map((p, i) => (
         <p key={i} className="font-semibold" style={{ color: p.color }}>
-          {p.name}: <span className="text-slate-800">{p.value}</span>
+          {p.name}: <span className="text-slate-800 dark:text-slate-100">{p.value}</span>
         </p>
       ))}
     </div>
@@ -28,10 +29,11 @@ function TooltipContent({ active, payload, label }) {
 }
 
 function DonutCenter({ viewBox, total }) {
+  const isDark = document.documentElement.classList.contains('dark')
   const { cx, cy } = viewBox
   return (
     <g>
-      <text x={cx} y={cy - 8} textAnchor="middle" style={{ fontSize: 28, fontWeight: 700, fill: '#1e293b' }}>
+      <text x={cx} y={cy - 8} textAnchor="middle" style={{ fontSize: 28, fontWeight: 700, fill: isDark ? '#f1f5f9' : '#1e293b' }}>
         {total}
       </text>
       <text x={cx} y={cy + 14} textAnchor="middle" style={{ fontSize: 11, fill: '#94a3b8', letterSpacing: 1 }}>
@@ -46,7 +48,7 @@ function KpiCard({ label, sub, value, icon: Icon, color, extra, onClick, active 
   return (
     <Comp
       onClick={onClick}
-      className={`w-full text-left relative overflow-hidden bg-white rounded-2xl p-5 border shadow-sm transition-all
+      className={`w-full text-left relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl p-5 border shadow-sm transition-all dark:border-slate-700
         ${onClick ? 'cursor-pointer hover:shadow-md active:scale-[0.98]' : ''}
         ${active ? `${color.activeBorder ?? color.border} ring-2 ring-offset-1 ${color.ring ?? 'ring-blue-200'} shadow-md` : color.border}`}
     >
@@ -68,6 +70,7 @@ function KpiCard({ label, sub, value, icon: Icon, color, extra, onClick, active 
 export default function Dashboard() {
   const { assets } = useAssets()
   const { categorias, situacoes } = useMasterData()
+  const { isDark } = useTheme()
   const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState({ type: null, value: null })
 
@@ -234,12 +237,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* Bar — Ativos por Categoria */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-5 pt-5 pb-4 border-b border-slate-50">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-slate-50 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-slate-800">Ativos por Categoria</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Clique para ver no inventário</p>
+                <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Ativos por Categoria</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Clique para ver no inventário</p>
               </div>
               <Link to="/assets" className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors">
                 Ver inventário <ArrowRight size={12} />
@@ -249,10 +252,10 @@ export default function Dashboard() {
           <div className="p-5">
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={data.byCategory} layout="vertical" margin={{ left: 8, right: 36, top: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f8fafc" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDark ? '#334155' : '#f8fafc'} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis type="category" dataKey="label" tick={{ fontSize: 12, fill: '#475569' }} axisLine={false} tickLine={false} width={96} />
-                <Tooltip content={<TooltipContent />} cursor={{ fill: '#f8fafc', radius: 6 }} />
+                <YAxis type="category" dataKey="label" tick={{ fontSize: 12, fill: isDark ? '#94a3b8' : '#475569' }} axisLine={false} tickLine={false} width={96} />
+                <Tooltip content={<TooltipContent />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', radius: 6 }} />
                 <Bar
                   dataKey="count"
                   name="Ativos"
@@ -271,10 +274,10 @@ export default function Dashboard() {
         </div>
 
         {/* Donut — Status */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-5 pt-5 pb-4 border-b border-slate-50">
-            <h2 className="text-sm font-semibold text-slate-800">Status dos Ativos</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Clique para ver no inventário</p>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-slate-50 dark:border-slate-700">
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Status dos Ativos</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Clique para ver no inventário</p>
           </div>
           <div className="p-5">
             <ResponsiveContainer width="100%" height={160}>
@@ -308,11 +311,11 @@ export default function Dashboard() {
                   <button
                     key={s.id}
                     onClick={() => toAssets({ filterStatus: s.id })}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all text-left hover:bg-slate-50"
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all text-left hover:bg-slate-50 dark:hover:bg-slate-700/50"
                   >
                     <div className="w-2 h-2 rounded-full shrink-0" style={{ background: PALETTE[i % PALETTE.length] }} />
-                    <span className="text-xs text-slate-600 flex-1 truncate">{s.nome}</span>
-                    <span className="text-xs font-bold text-slate-700 tabular-nums">{s.count}</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-300 flex-1 truncate">{s.nome}</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 tabular-nums">{s.count}</span>
                     <span className="text-xs tabular-nums w-9 text-right font-medium" style={{ color: PALETTE[i % PALETTE.length] }}>
                       {pct}%
                     </span>
@@ -326,16 +329,16 @@ export default function Dashboard() {
       </div>
 
       {/* ── Area — Manutenções por Mês ── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-5 pt-5 pb-4 border-b border-slate-50">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-5 pt-5 pb-4 border-b border-slate-50 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-slate-800">Manutenções por Mês</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Clique em um mês para filtrar o histórico</p>
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Manutenções por Mês</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Clique em um mês para filtrar o histórico</p>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-violet-50 rounded-lg">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-violet-50 dark:bg-violet-900/30 rounded-lg">
               <div className="w-2 h-2 rounded-full bg-violet-500" />
-              <span className="text-xs font-medium text-violet-600">Manutenções</span>
+              <span className="text-xs font-medium text-violet-600 dark:text-violet-400">Manutenções</span>
             </div>
           </div>
         </div>
@@ -358,7 +361,7 @@ export default function Dashboard() {
                   <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
               <XAxis
                 dataKey="label"
                 tick={({ x, y, payload, index }) => {
@@ -389,7 +392,7 @@ export default function Dashboard() {
                       key={index}
                       cx={cx} cy={cy}
                       r={isActive ? 6 : 4}
-                      fill={isActive ? '#8b5cf6' : '#fff'}
+                      fill={isActive ? '#8b5cf6' : (isDark ? '#1e293b' : '#fff')}
                       stroke="#8b5cf6"
                       strokeWidth={2}
                     />
@@ -423,11 +426,11 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {/* Garantias a Vencer */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-5 pt-5 pb-4 border-b border-slate-50 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-slate-50 dark:border-slate-700 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-slate-800">Garantias a Vencer</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Garantias a Vencer</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                 {activeFilter.type ? `${displayWarranty.length} resultado${displayWarranty.length !== 1 ? 's' : ''}` : 'Ordenado pelos mais urgentes'}
               </p>
             </div>
@@ -448,15 +451,15 @@ export default function Dashboard() {
                     key={a.id}
                     className={`flex items-center justify-between px-3 py-2.5 rounded-xl border-l-2 transition-colors ${
                       a.daysLeft <= 30
-                        ? 'bg-red-50/60 border-l-red-400 hover:bg-red-50'
+                        ? 'bg-red-50/60 dark:bg-red-900/20 border-l-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'
                         : a.daysLeft <= 90
-                        ? 'bg-amber-50/60 border-l-amber-400 hover:bg-amber-50'
-                        : 'bg-slate-50 border-l-transparent hover:bg-slate-100'
+                        ? 'bg-amber-50/60 dark:bg-amber-900/20 border-l-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                        : 'bg-slate-50 dark:bg-slate-700/30 border-l-transparent hover:bg-slate-100 dark:hover:bg-slate-700/50'
                     }`}
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-700 truncate">{a.name}</p>
-                      <p className="text-xs text-slate-400 truncate mt-0.5">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{a.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
                         {[a.brand, a.model, a.department].filter(Boolean).join(' · ')}
                       </p>
                     </div>
@@ -478,7 +481,7 @@ export default function Dashboard() {
             )}
 
             {data.expiredWarranty.length > 0 && !activeFilter.type && (
-              <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-red-500 font-medium">
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center gap-2 text-xs text-red-500 font-medium">
                 <div className="w-5 h-5 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
                   <AlertTriangle size={11} className="text-red-500" />
                 </div>
@@ -489,11 +492,11 @@ export default function Dashboard() {
         </div>
 
         {/* Últimas Manutenções */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-5 pt-5 pb-4 border-b border-slate-50 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-slate-50 dark:border-slate-700 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-slate-800">Últimas Manutenções</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Últimas Manutenções</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                 {activeFilter.type ? `${displayRecent.length} resultado${displayRecent.length !== 1 ? 's' : ''}` : 'Atividade recente registrada'}
               </p>
             </div>
@@ -509,22 +512,22 @@ export default function Dashboard() {
               </p>
             ) : (
               <div className="relative">
-                <div className="absolute left-[19px] top-3 bottom-3 w-px bg-slate-100" />
+                <div className="absolute left-[19px] top-3 bottom-3 w-px bg-slate-100 dark:bg-slate-700" />
                 <div className="space-y-1">
                   {displayRecent.map((m, idx) => (
                     <div key={m.id} className="flex items-start gap-3 group">
                       <div className={`relative z-10 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                        idx === 0 ? 'bg-violet-500 shadow-sm shadow-violet-200' : 'bg-slate-100 group-hover:bg-violet-100'
+                        idx === 0 ? 'bg-violet-500 shadow-sm shadow-violet-200' : 'bg-slate-100 dark:bg-slate-700 group-hover:bg-violet-100 dark:group-hover:bg-violet-900/40'
                       }`}>
-                        <Wrench size={13} className={idx === 0 ? 'text-white' : 'text-slate-400 group-hover:text-violet-500'} />
+                        <Wrench size={13} className={idx === 0 ? 'text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-violet-500'} />
                       </div>
                       <div className="flex-1 min-w-0 py-2">
-                        <p className="text-sm font-medium text-slate-700 truncate leading-tight">{m.assetName}</p>
-                        <p className="text-xs text-slate-400 truncate mt-0.5">
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate leading-tight">{m.assetName}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
                           {[m.type, m.description].filter(Boolean).join(' · ') || 'Manutenção'}
                         </p>
                       </div>
-                      <div className="shrink-0 pt-2 flex items-center gap-1.5 text-xs text-slate-400">
+                      <div className="shrink-0 pt-2 flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                         <Calendar size={11} />
                         <span className="tabular-nums">
                           {m.date ? new Date(m.date).toLocaleDateString('pt-BR') : '—'}

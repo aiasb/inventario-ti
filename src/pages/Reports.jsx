@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { useMasterData } from '../context/MasterDataContext'
 import { useAssets } from '../context/AssetsContext'
+import { useTheme } from '../context/ThemeContext'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as RechTooltip, ResponsiveContainer,
@@ -82,18 +83,18 @@ function PieTooltip({ active, payload }) {
 
 function ChartCard({ title, sub, children, loading, className = '', action }) {
   return (
-    <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col ${className}`}>
-      <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-slate-50">
+    <div className={`bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col ${className}`}>
+      <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-slate-50 dark:border-slate-700">
         <div>
-          <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
-          {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h3>
+          {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
         </div>
         {action}
       </div>
       <div className="flex-1 p-4">
         {loading ? (
           <div className="flex items-center justify-center h-40">
-            <RefreshCw size={18} className="text-slate-300 animate-spin" />
+            <RefreshCw size={18} className="text-slate-300 dark:text-slate-600 animate-spin" />
           </div>
         ) : children}
       </div>
@@ -105,20 +106,20 @@ function ChartCard({ title, sub, children, loading, className = '', action }) {
 
 function KpiCard({ label, value, sub, icon: Icon, colorClass, loading }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-4 flex items-center gap-3">
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${colorClass}`}>
         <Icon size={22} className="text-white" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-slate-500 font-medium truncate">{label}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">{label}</p>
         {loading ? (
-          <div className="h-7 w-20 bg-slate-100 rounded-lg mt-1 animate-pulse" />
+          <div className="h-7 w-20 bg-slate-100 dark:bg-slate-700 rounded-lg mt-1 animate-pulse" />
         ) : (
-          <p className="text-2xl font-bold text-slate-800 leading-tight">
+          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-tight">
             {value?.toLocaleString('pt-BR') ?? '—'}
           </p>
         )}
-        {sub && !loading && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+        {sub && !loading && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
       </div>
     </div>
   )
@@ -156,6 +157,7 @@ function PieLegend({ data }) {
 export default function Reports() {
   const { categorias, situacoes, setores, periodosManutencao } = useMasterData()
   const { assets, loading } = useAssets()
+  const { isDark } = useTheme()
   const chartsRef = useRef(null)
   const [exportingPDF, setExportingPDF] = useState(false)
   const [filters, setFilters] = useState({ category: '', status: '', dept: '', warranty: '', manutLimpeza: '', manutFormatacao: '' })
@@ -729,10 +731,10 @@ export default function Reports() {
             {data?.by_category?.length > 0 ? (
               <ResponsiveContainer width="100%" height={210}>
                 <BarChart layout="vertical" data={data.by_category} margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <YAxis type="category" dataKey="label" width={90} tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
-                  <RechTooltip content={<ChartTooltip />} cursor={{ fill: '#f8fafc' }} />
+                  <YAxis type="category" dataKey="label" width={90} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#475569' }} axisLine={false} tickLine={false} />
+                  <RechTooltip content={<ChartTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc' }} />
                   <Bar dataKey="count" radius={[0, 6, 6, 0]} maxBarSize={18}>
                     {data.by_category.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
                   </Bar>
@@ -761,10 +763,10 @@ export default function Reports() {
             {data?.by_department?.length > 0 ? (
               <ResponsiveContainer width="100%" height={210}>
                 <BarChart layout="vertical" data={data.by_department} margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <YAxis type="category" dataKey="label" width={100} tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
-                  <RechTooltip content={<ChartTooltip />} cursor={{ fill: '#f8fafc' }} />
+                  <YAxis type="category" dataKey="label" width={100} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#475569' }} axisLine={false} tickLine={false} />
+                  <RechTooltip content={<ChartTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc' }} />
                   <Bar dataKey="count" fill="#8b5cf6" radius={[0, 6, 6, 0]} maxBarSize={18} />
                 </BarChart>
               </ResponsiveContainer>
@@ -785,7 +787,7 @@ export default function Reports() {
                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <RechTooltip content={<ChartTooltip />} />
@@ -843,11 +845,11 @@ export default function Reports() {
             {data?.manut_by_type?.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={data.manut_by_type} margin={{ top: 0, right: 10, left: -20, bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#475569' }} axisLine={false} tickLine={false}
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: isDark ? '#94a3b8' : '#475569' }} axisLine={false} tickLine={false}
                     angle={-35} textAnchor="end" interval={0} />
                   <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <RechTooltip content={<ChartTooltip />} cursor={{ fill: '#f8fafc' }} />
+                  <RechTooltip content={<ChartTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc' }} />
                   <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={40}>
                     {data.manut_by_type.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
                   </Bar>
