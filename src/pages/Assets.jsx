@@ -7,11 +7,12 @@ import { useLocation } from 'react-router-dom'
 import { usePlatform } from '../hooks/usePlatform'
 import {
   Search, Plus, Filter, LayoutGrid, List,
-  Edit2, Trash2, Eye, ChevronUp, ChevronDown, Download, ShieldCheck, ShieldOff, Ban,
+  Edit2, Trash2, Eye, ChevronUp, ChevronDown, Download, ShieldCheck, ShieldOff, Ban, Upload,
 } from 'lucide-react'
 import AssetModal from '../components/AssetModal'
 import AssetForm from '../components/AssetForm'
 import CustomSelect from '../components/CustomSelect'
+import ImportModal from '../components/ImportModal'
 import { exportCSV as doExportCSV } from '../lib/exportCSV'
 
 function isoDatePart(str) {
@@ -74,7 +75,7 @@ function SortIcon({ field, sortField, sortDir }) {
 }
 
 export default function Assets() {
-  const { assets, deleteAsset } = useAssets()
+  const { assets, deleteAsset, reload } = useAssets()
   const { categorias, setores, situacoes, periodosManutencao } = useMasterData()
   const { profile } = useAuth()
   const { isAndroid } = usePlatform()
@@ -98,6 +99,7 @@ export default function Assets() {
     !!(nav.filterCategory || nav.filterStatus || nav.filterWarranty)
   )
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   const descartadoId = useMemo(
     () => situacoes.items.find(s => s.nome?.toLowerCase() === 'descartado')?.id,
@@ -287,6 +289,17 @@ export default function Assets() {
                 <LayoutGrid size={16} />
               </button>
             </div>
+          )}
+
+          {canEdit && !isAndroid && (
+            <button
+              onClick={() => setShowImport(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-medium transition-colors"
+              title="Importar ativos de planilha"
+            >
+              <Upload size={16} />
+              <span className="hidden sm:inline">Importar</span>
+            </button>
           )}
 
           <div className="relative">
@@ -602,6 +615,12 @@ export default function Assets() {
       )}
       {showForm && (
         <AssetForm asset={editingAsset} onClose={() => { setShowForm(false); setEditingAsset(null) }} />
+      )}
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onImported={() => { reload(); setShowImport(false) }}
+        />
       )}
     </div>
   )

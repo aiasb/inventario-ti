@@ -207,6 +207,7 @@ export function AssetsProvider({ children, onReady, onError }) {
       deleteAsset,
       addMaintenance,
       deleteMaintenance,
+      reload: loadData,
     }}>
       {children}
     </AssetsContext.Provider>
