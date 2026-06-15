@@ -413,7 +413,8 @@ export default function AssetForm({ asset, onClose }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Setor" hint={setores.items.length === 0 ? 'Nenhum setor cadastrado.' : undefined}>
               <CustomSelect value={form.department} onChange={v => set('department', v)}
-                placeholder="Selecione..." options={setores.items.map(s => ({ value: s.nome, label: s.nome }))} />
+                placeholder="Selecione..." searchable
+                options={[...setores.items].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')).map(s => ({ value: s.nome, label: s.nome }))} />
             </Field>
             <Field
               label="Responsável"
@@ -425,11 +426,12 @@ export default function AssetForm({ asset, onClose }) {
                 onChange={v => { set('assignedTo', v) }}
                 placeholder={emUsoId && form.status === emUsoId ? 'Selecione o responsável...' : 'Sem responsável'}
                 error={!!errors.assignedTo}
+                searchable
                 options={[
                   ...(!emUsoId || form.status !== emUsoId
                     ? [{ value: '', label: 'Sem responsável' }]
                     : []),
-                  ...responsaveis.items.map(r => ({ value: r.nome, label: r.nome })),
+                  ...[...responsaveis.items].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')).map(r => ({ value: r.nome, label: r.nome })),
                 ]}
                 footerAction={{
                   label: 'Cadastrar novo responsável',

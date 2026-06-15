@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, Check } from 'lucide-react'
+import { ChevronDown, Check, Search } from 'lucide-react'
 
 /**
  * Custom select replacement for Android dark mode compatibility.
@@ -12,9 +12,9 @@ import { ChevronDown, Check } from 'lucide-react'
  *   options      – [{ value, label }]
  *   placeholder  – string
  *   error        – bool (red border)
+ *   searchable   – bool (shows a search input inside the dropdown)
  *   className    – extra classes on the trigger button
  *   footerAction – { label: string, icon?: ReactNode, onClick: fn }
- *                  renders a special action button at the bottom of the list
  */
 export default function CustomSelect({
   value,
@@ -22,16 +22,27 @@ export default function CustomSelect({
   options = [],
   placeholder = 'Selecione...',
   error,
+  searchable = false,
   className = '',
   footerAction,
 }) {
-  const [open, setOpen] = useState(false)
-  const [dropPos, setDropPos] = useState(null)
-  const btnRef = useRef(null)
+  const [open, setOpen]           = useState(false)
+  const [dropPos, setDropPos]     = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const btnRef   = useRef(null)
+  const inputRef = useRef(null)
+
+  // Focus search input whenever dropdown opens
+  useEffect(() => {
+    if (open && searchable) {
+      setTimeout(() => inputRef.current?.focus(), 30)
+    }
+    if (!open) setSearchTerm('')
+  }, [open, searchable])
 
   function handleOpen() {
-    const rect = btnRef.current.getBoundingClientRect()
-    const maxH = 260
+    const rect  = btnRef.current.getBoundingClientRect()
+    const maxH  = searchable ? 300 : 260
     const spaceBelow = window.innerHeight - rect.bottom - 8
 
     const top = (spaceBelow >= maxH || spaceBelow >= rect.top)
@@ -53,6 +64,15 @@ export default function CustomSelect({
   }
 
   const selected = options.find(o => String(o.value) === String(value))
+
+  const norm = (s) =>
+    String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+
+  const filteredOptions = searchable && searchTerm
+    ? options.filter(o => norm(o.label).includes(norm(searchTerm)))
+    : options
+
+  const maxH = searchable ? 300 : 260
 
   return (
     <>
@@ -84,30 +104,39 @@ export default function CustomSelect({
 
       {open && dropPos && createPortal(
         <>
-          {/* Backdrop — closes on outside tap */}
-          <div
-            className="fixed inset-0 z-[9998]"
-            onClick={() => setOpen(false)}
-          />
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
 
-          {/* Dropdown list */}
+          {/* Dropdown */}
           <div
             className="fixed z-[9999] overflow-hidden rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl flex flex-col"
-            style={{ top: dropPos.top, left: dropPos.left, width: dropPos.width, maxHeight: 260 }}
+            style={{ top: dropPos.top, left: dropPos.left, width: dropPos.width, maxHeight: maxH }}
           >
+            {/* Search input */}
+            {searchable && (
+              <div className="shrink-0 p-2 border-b border-slate-100 dark:border-slate-700">
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    placeholder="Buscar..."
+                    className="w-full pl-7 pr-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-400 dark:focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Options */}
             <div className="overflow-y-auto flex-1">
-              {options.length === 0 && !footerAction && (
+              {filteredOptions.length === 0 && (
                 <p className="px-4 py-3 text-sm text-slate-400 dark:text-slate-500 text-center">
-                  Nenhuma opção disponível
+                  {searchTerm ? 'Nenhum resultado' : 'Nenhuma opção disponível'}
                 </p>
               )}
-              {options.length === 0 && footerAction && (
-                <p className="px-4 py-2 text-xs text-slate-400 dark:text-slate-500 text-center">
-                  Nenhum cadastrado ainda
-                </p>
-              )}
-              {options.map(opt => {
+              {filteredOptions.map(opt => {
                 const isSelected = String(opt.value) === String(value)
                 const isEmpty    = opt.value === ''
                 return (
@@ -131,7 +160,7 @@ export default function CustomSelect({
               })}
             </div>
 
-            {/* Footer action (e.g. "Novo responsável") */}
+            {/* Footer action */}
             {footerAction && (
               <div className="border-t border-slate-100 dark:border-slate-700 shrink-0">
                 <button
