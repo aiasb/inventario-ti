@@ -286,7 +286,16 @@ export default function AssetModal({ asset: assetProp, onClose, onEdit }) {
         {isDescartado && (
           <div className="mx-6 mt-3 flex items-center gap-2.5 px-4 py-3 bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-600 rounded-xl text-zinc-600 dark:text-zinc-400 text-sm font-medium">
             <Ban size={16} className="shrink-0 text-zinc-500 dark:text-zinc-500" />
-            Este ativo foi descartado e não pode receber intervenções.
+            <div>
+              <p>Este ativo foi descartado e não pode receber intervenções.</p>
+              {asset.discardDate && (
+                <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5 font-normal">
+                  Data do descarte: <span className="font-semibold">
+                    {new Date(asset.discardDate.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  </span>
+                </p>
+              )}
+            </div>
           </div>
         )}
 

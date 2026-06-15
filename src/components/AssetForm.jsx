@@ -10,14 +10,14 @@ import CustomSelect from './CustomSelect'
 const TRACKED_KEYS = [
   'name', 'category', 'status', 'serialNumber', 'brand', 'model',
   'department', 'assignedTo', 'memory', 'storage',
-  'purchaseDate', 'warrantyExpiry', 'location', 'notes',
+  'purchaseDate', 'warrantyExpiry', 'discardDate', 'location', 'notes',
 ]
 
 const EMPTY = {
   name: '', category: '', status: '',
   serialNumber: '', brand: '', model: '', department: '', assignedTo: '',
   memory: '', storage: '',
-  purchaseDate: '', warrantyExpiry: '', location: '', notes: '',
+  purchaseDate: '', warrantyExpiry: '', discardDate: '', location: '', notes: '',
 }
 
 function Field({ label, required, children, hint }) {
@@ -159,7 +159,8 @@ function ExitConfirmDialog({ saving, onSave, onDiscard, onContinue }) {
 export default function AssetForm({ asset, onClose }) {
   const { addAsset, updateAsset } = useAssets()
   const { responsaveis, setores, categorias, marcas, situacoes } = useMasterData()
-  const emUsoId = situacoes.items.find(s => s.nome?.toLowerCase().includes('uso'))?.id ?? null
+  const emUsoId      = situacoes.items.find(s => s.nome?.toLowerCase().includes('uso'))?.id ?? null
+  const descartadoId = situacoes.items.find(s => s.nome?.toLowerCase() === 'descartado')?.id ?? null
 
   const isEdit = !!asset
 
@@ -170,6 +171,7 @@ export default function AssetForm({ asset, onClose }) {
       ...asset,
       purchaseDate:   asset.purchaseDate   ? asset.purchaseDate.split('T')[0]   : '',
       warrantyExpiry: asset.warrantyExpiry ? asset.warrantyExpiry.split('T')[0] : '',
+      discardDate:    asset.discardDate    ? asset.discardDate.split('T')[0]    : '',
     }
   }, []) // eslint-disable-line
 
@@ -256,7 +258,13 @@ export default function AssetForm({ asset, onClose }) {
   }
 
   function set(key, value) {
-    setForm(f => ({ ...f, [key]: value }))
+    setForm(f => {
+      const next = { ...f, [key]: value }
+      if (key === 'status' && value === descartadoId && !f.discardDate) {
+        next.discardDate = new Date().toISOString().split('T')[0]
+      }
+      return next
+    })
     if (errors[key]) setErrors(e => ({ ...e, [key]: null }))
   }
 
@@ -442,6 +450,15 @@ export default function AssetForm({ asset, onClose }) {
               <DatePicker value={form.warrantyExpiry} onChange={v => set('warrantyExpiry', v)} placeholder="Selecione a data" />
             </Field>
           </div>
+
+          {/* Data de Descarte — visível apenas quando status = Descartado */}
+          {descartadoId && form.status === descartadoId && (
+            <div className="bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 rounded-xl p-4">
+              <Field label="Data do Descarte" required>
+                <DatePicker value={form.discardDate} onChange={v => set('discardDate', v)} placeholder="Selecione a data do descarte" />
+              </Field>
+            </div>
+          )}
 
           {/* Observações */}
           <Field label="Observações">

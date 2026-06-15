@@ -42,7 +42,9 @@ export default function Sidebar() {
     >
       {/* Logo / Brand */}
       <div className={`flex items-center gap-3 px-4 py-5 border-b border-slate-700/60 ${collapsed ? 'justify-center' : ''}`}>
-        <img src={logoImg} alt="Logo" className="w-9 h-9 object-contain shrink-0 rounded-xl" />
+        <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 flex items-center justify-center bg-white">
+          <img src={logoImg} alt="Logo" className="w-full h-full object-contain p-0.5" />
+        </div>
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white leading-tight truncate">{companyName}</p>

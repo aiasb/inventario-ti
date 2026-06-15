@@ -111,7 +111,7 @@ export default function Assets() {
 
   const filtered = useMemo(() => {
     let list = assets.filter(a => {
-      if (!showDescartados && descartadoId && a.status === descartadoId) return false
+      if (!showDescartados && descartadoId && a.status === descartadoId && filterStatus !== descartadoId) return false
       const q = search.toLowerCase()
       const matchesSearch = !q || [a.name, a.serialNumber, a.assignedTo, a.brand, a.model]
         .some(v => v?.toLowerCase().includes(q))
@@ -162,7 +162,7 @@ export default function Assets() {
 
     const headers = [
       'Hostname', 'Serial', 'Categoria', 'Marca', 'Modelo', 'Status', 'Setor', 'Responsável',
-      'Memória', 'Armazenamento', 'Data Compra', 'Garantia', 'Observações',
+      'Memória', 'Armazenamento', 'Data Compra', 'Garantia', 'Data Descarte', 'Observações',
       ...periodos.map(p => `Última ${p.tipo}`),
     ]
 
@@ -178,6 +178,7 @@ export default function Assets() {
       return [
         a.name, a.serialNumber, cat, a.brand, a.model, stat, a.department, a.assignedTo,
         a.memory, a.storage, fmtDate(a.purchaseDate), fmtDate(a.warrantyExpiry),
+        fmtDate(a.discardDate),
         (a.notes || '').replace(/\n/g, ' '),
         ...manutCols,
       ]
@@ -367,9 +368,7 @@ export default function Assets() {
                 placeholder="Todos"
                 options={[
                   { value: '', label: 'Todos' },
-                  ...situacoes.items
-                    .filter(s => s.id !== descartadoId)
-                    .map(s => ({ value: s.id, label: s.nome })),
+                  ...situacoes.items.map(s => ({ value: s.id, label: s.nome })),
                 ]}
               />
             </div>

@@ -16,6 +16,7 @@ export function assetToDb(asset) {
     storage:        asset.storage        || null,
     purchaseDate:   asset.purchaseDate   || null,
     warrantyExpiry: asset.warrantyExpiry || null,
+    discardDate:    asset.discardDate    || null,
     location:       asset.location       || null,
     notes:          asset.notes          || null,
   }

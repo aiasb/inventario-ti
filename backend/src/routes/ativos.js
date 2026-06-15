@@ -26,6 +26,7 @@ function dbToAsset(row) {
     storage:        row.storage,
     purchaseDate:   toDateStr(row.purchase_date),
     warrantyExpiry: toDateStr(row.warranty_expiry),
+    discardDate:    toDateStr(row.discard_date),
     location:       row.location,
     notes:          row.notes,
   }
@@ -61,6 +62,7 @@ function bindAsset(req, asset) {
     .input('storage',        sql.NVarChar,         asset.storage        || null)
     .input('purchase_date',  sql.Date,             asset.purchaseDate   || null)
     .input('warranty_expiry',sql.Date,             asset.warrantyExpiry || null)
+    .input('discard_date',   sql.Date,             asset.discardDate    || null)
     .input('location',       sql.NVarChar,         asset.location       || null)
     .input('notes',          sql.NVarChar(sql.MAX), asset.notes         || null)
 }
@@ -100,10 +102,10 @@ router.post('/', requireAuth, requireWrite, async (req, res) => {
 
     const { recordset } = await request.query(`
       INSERT INTO ativos (id, name, category, status, serial_number, brand, model,
-        department, assigned_to, memory, storage, purchase_date, warranty_expiry, location, notes)
+        department, assigned_to, memory, storage, purchase_date, warranty_expiry, discard_date, location, notes)
       OUTPUT INSERTED.*
       VALUES (@id, @name, @category, @status, @serial_number, @brand, @model,
-        @department, @assigned_to, @memory, @storage, @purchase_date, @warranty_expiry, @location, @notes)
+        @department, @assigned_to, @memory, @storage, @purchase_date, @warranty_expiry, @discard_date, @location, @notes)
     `)
 
     res.status(201).json({ ...dbToAsset(recordset[0]), maintenances: [] })
@@ -126,6 +128,7 @@ router.put('/:id', requireAuth, requireWrite, async (req, res) => {
         department = @department, assigned_to = @assigned_to,
         memory = @memory, storage = @storage,
         purchase_date = @purchase_date, warranty_expiry = @warranty_expiry,
+        discard_date = @discard_date,
         location = @location, notes = @notes,
         updated_at = GETDATE()
       OUTPUT INSERTED.*
