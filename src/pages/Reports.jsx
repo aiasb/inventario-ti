@@ -660,7 +660,7 @@ export default function Reports() {
           <CustomSelect
             value={filters.status} onChange={v => setFilter('status', v)}
             placeholder="Todos os status" className="min-w-[140px] !py-1.5 !text-xs"
-            options={[{ value: '', label: 'Todos os status' }, ...situacoes.items.filter(s => s.id !== 'descartado').map(s => ({ value: s.id, label: s.nome }))]}
+            options={[{ value: '', label: 'Todos os status' }, ...situacoes.items.map(s => ({ value: s.id, label: s.nome }))]}
           />
 
           <CustomSelect

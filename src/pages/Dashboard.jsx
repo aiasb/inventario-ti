@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useAssets } from '../context/AssetsContext'
 import { useMasterData } from '../context/MasterDataContext'
 import { useTheme } from '../context/ThemeContext'
@@ -9,8 +9,9 @@ import {
 } from 'recharts'
 import {
   Package, ShieldAlert, Wrench, AlertTriangle,
-  ChevronRight, TrendingUp, Calendar, ArrowRight, X,
+  ChevronRight, TrendingUp, Calendar, ArrowRight, X, Clock,
 } from 'lucide-react'
+import { apiFetch } from '../lib/api-client'
 
 const PALETTE = ['#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#06b6d4', '#f59e0b', '#ef4444', '#64748b']
 
@@ -59,7 +60,7 @@ function KpiCard({ label, sub, value, icon: Icon, color, extra, onClick, active 
         </div>
         <div>
           <p className={`text-3xl font-bold tracking-tight ${color.value}`}>{value}</p>
-          <p className="text-sm font-medium text-slate-600 mt-0.5">{label}</p>
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mt-0.5">{label}</p>
           {extra ?? <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
         </div>
       </div>
@@ -67,12 +68,73 @@ function KpiCard({ label, sub, value, icon: Icon, color, extra, onClick, active 
   )
 }
 
+// ─── Próximas Manutenções ─────────────────────────────────────────────────────
+
+const PROX_STATUS_CFG = {
+  atrasado: { label: 'Atrasada',  bg: 'bg-red-50 dark:bg-red-900/20',    border: 'border-l-red-400',    badge: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'    },
+  urgente:  { label: 'Urgente',   bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-l-amber-400',  badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+  proximo:  { label: 'Próxima',   bg: 'bg-blue-50 dark:bg-blue-900/20',   border: 'border-l-blue-400',   badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'   },
+}
+
+function ProximasManutencoes({ data }) {
+  const urgentes = data.filter(d => d.status === 'atrasado' || d.status === 'urgente')
+  const proximas = data.filter(d => d.status === 'proximo')
+  const shown    = [...urgentes, ...proximas].slice(0, 8)
+
+  if (shown.length === 0) return (
+    <p className="text-center text-sm text-slate-400 dark:text-slate-500 py-10">
+      Nenhuma manutenção pendente ou próxima
+    </p>
+  )
+
+  return (
+    <div className="space-y-1.5">
+      {shown.map((item, i) => {
+        const cfg = PROX_STATUS_CFG[item.status] ?? PROX_STATUS_CFG.proximo
+        const daysLabel = item.daysLeft < 0
+          ? `${Math.abs(item.daysLeft)}d atrás`
+          : item.daysLeft === 0
+          ? 'hoje'
+          : `em ${item.daysLeft}d`
+        return (
+          <div
+            key={`${item.assetId}-${item.periodoTipo}-${i}`}
+            className={`flex items-center justify-between px-3 py-2.5 rounded-xl border-l-2 ${cfg.bg} ${cfg.border}`}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{item.assetName}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">{item.periodoTipo}</p>
+            </div>
+            <div className="flex items-center gap-2 ml-3 shrink-0">
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${cfg.badge}`}>
+                {cfg.label}
+              </span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 tabular-nums min-w-[52px] text-right">
+                {daysLabel}
+              </span>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function Dashboard() {
   const { assets } = useAssets()
   const { categorias, situacoes } = useMasterData()
   const { isDark } = useTheme()
   const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState({ type: null, value: null })
+  const [proximasData, setProximasData] = useState([])
+
+  useEffect(() => {
+    apiFetch('/api/reports/proximas-manutencoes')
+      .then(setProximasData)
+      .catch(() => {})
+  }, [])
 
   function toAssets(state) { navigate('/assets', { state }) }
 
@@ -87,7 +149,13 @@ export default function Dashboard() {
 
   const data = useMemo(() => {
     const now = new Date()
-    const ativos = assets.filter(a => a.status !== 'descartado')
+
+    // ── Bug fix: usar UUID real de "Descartado", não string literal ──
+    const descartadoId = situacoes.items.find(
+      s => s.nome?.toLowerCase().includes('descartad')
+    )?.id ?? '__none__'
+
+    const ativos = assets.filter(a => a.status !== descartadoId)
     const descartadosCount = assets.length - ativos.length
 
     const allMaint = ativos.flatMap(a =>
@@ -100,7 +168,7 @@ export default function Dashboard() {
     )
 
     const byStatus = situacoes.items
-      .filter(s => s.id !== 'descartado')
+      .filter(s => s.id !== descartadoId)
       .map(s => ({ id: s.id, nome: s.nome, cor: s.cor, count: ativos.filter(a => a.status === s.id).length }))
       .filter(s => s.count > 0)
 
@@ -158,9 +226,16 @@ export default function Dashboard() {
     return m ? `Mês de ${m.label}` : null
   }, [activeFilter, data.months])
 
+  // ── Métricas derivadas ────────────────────────────────────────────────────────
   const inUsePct   = data.total > 0 ? Math.round((data.inUseCount / data.total) * 100) : 0
   const alertCount = data.criticalWarranty.length + data.warningWarranty.length
   const hasCritical = data.criticalWarranty.length > 0
+
+  // KPI manutenções: usa proximas-manutencoes para split atrasadas/urgentes
+  const atrasadasCount = proximasData.filter(d => d.status === 'atrasado').length
+  const urgentesCount  = proximasData.filter(d => d.status === 'urgente').length
+  const manutAlertTotal = atrasadasCount + urgentesCount
+  const hasManutAlert   = manutAlertTotal > 0
 
   return (
     <div className="p-6 space-y-6">
@@ -173,7 +248,7 @@ export default function Dashboard() {
           value={data.total}
           icon={Package}
           onClick={() => toAssets({})}
-          color={{ border: 'border-slate-100', ring: 'ring-blue-200', orb: 'bg-blue-100', icon: 'bg-blue-500 shadow-blue-200', value: 'text-slate-800' }}
+          color={{ border: 'border-slate-100', ring: 'ring-blue-200', orb: 'bg-blue-100', icon: 'bg-blue-500 shadow-blue-200', value: 'text-slate-800 dark:text-slate-100' }}
           extra={
             <div className="mt-1 space-y-0.5">
               <p className="text-xs text-slate-400">Clique para ver inventário</p>
@@ -191,10 +266,10 @@ export default function Dashboard() {
           value={data.inUseCount}
           icon={TrendingUp}
           onClick={() => toAssets({ filterStatus: data.inUseStatusId })}
-          color={{ border: 'border-slate-100', ring: 'ring-emerald-300', orb: 'bg-emerald-100', icon: 'bg-emerald-500 shadow-emerald-200', value: 'text-slate-800' }}
+          color={{ border: 'border-slate-100', ring: 'ring-emerald-300', orb: 'bg-emerald-100', icon: 'bg-emerald-500 shadow-emerald-200', value: 'text-slate-800 dark:text-slate-100' }}
           extra={
             <div className="mt-2 space-y-1">
-              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-400 rounded-full transition-all duration-1000" style={{ width: `${inUsePct}%` }} />
               </div>
               <p className="text-xs font-semibold text-emerald-600">{inUsePct}% do parque</p>
@@ -219,16 +294,43 @@ export default function Dashboard() {
             ring: 'ring-red-300',
             orb: hasCritical ? 'bg-red-100' : 'bg-amber-100',
             icon: hasCritical ? 'bg-red-500 shadow-red-200' : 'bg-amber-500 shadow-amber-200',
-            value: hasCritical ? 'text-red-600' : 'text-slate-800',
+            value: hasCritical ? 'text-red-600' : 'text-slate-800 dark:text-slate-100',
           }}
         />
 
+        {/* KPI Manutenções — agora com split atrasadas/urgentes */}
         <KpiCard
-          label="Manutenções"
-          sub="Registros no histórico"
+          label="Manutenções Preventivas"
           value={data.allMaint.length}
           icon={Wrench}
-          color={{ border: 'border-slate-100', ring: 'ring-violet-300', orb: 'bg-violet-100', icon: 'bg-violet-500 shadow-violet-200', value: 'text-slate-800' }}
+          color={{
+            border: hasManutAlert ? 'border-orange-100' : 'border-slate-100',
+            ring: 'ring-orange-300',
+            orb: hasManutAlert ? 'bg-orange-100' : 'bg-violet-100',
+            icon: hasManutAlert ? 'bg-orange-500 shadow-orange-200' : 'bg-violet-500 shadow-violet-200',
+            value: 'text-slate-800 dark:text-slate-100',
+          }}
+          extra={
+            <div className="mt-1 space-y-0.5">
+              <p className="text-xs text-slate-400">Registros no histórico</p>
+              {hasManutAlert ? (
+                <div className="flex items-center gap-1.5 mt-1">
+                  {atrasadasCount > 0 && (
+                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                      {atrasadasCount} atrasada{atrasadasCount > 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {urgentesCount > 0 && (
+                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                      {urgentesCount} urgente{urgentesCount > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+              ) : proximasData.length > 0 ? (
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Todas em dia ✓</p>
+              ) : null}
+            </div>
+          }
         />
 
       </div>
@@ -407,14 +509,14 @@ export default function Dashboard() {
 
       {/* ── Filter badge ── */}
       {activeFilter.type && (
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl">
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
           <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-          <p className="text-sm text-blue-700 font-medium flex-1">
+          <p className="text-sm text-blue-700 dark:text-blue-300 font-medium flex-1">
             Filtrando por: <span className="font-bold">{filterLabel}</span>
           </p>
           <button
             onClick={clearFilter}
-            className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 font-semibold transition-colors px-2 py-1 rounded-lg hover:bg-blue-100"
+            className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 font-semibold transition-colors px-2 py-1 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800"
           >
             <X size={12} />
             Limpar
@@ -441,7 +543,7 @@ export default function Dashboard() {
 
           <div className="p-4">
             {displayWarranty.length === 0 ? (
-              <p className="text-center text-sm text-slate-400 py-10">
+              <p className="text-center text-sm text-slate-400 dark:text-slate-500 py-10">
                 {activeFilter.type ? 'Nenhuma garantia para este filtro' : 'Nenhuma garantia ativa registrada'}
               </p>
             ) : (
@@ -468,9 +570,9 @@ export default function Dashboard() {
                         {new Date(a.warrantyExpiry).toLocaleDateString('pt-BR')}
                       </span>
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-lg tabular-nums min-w-[42px] text-center ${
-                        a.daysLeft <= 30 ? 'bg-red-100 text-red-700' :
-                        a.daysLeft <= 90 ? 'bg-amber-100 text-amber-700' :
-                        'bg-emerald-100 text-emerald-700'
+                        a.daysLeft <= 30 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                        a.daysLeft <= 90 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
                       }`}>
                         {a.daysLeft}d
                       </span>
@@ -482,7 +584,7 @@ export default function Dashboard() {
 
             {data.expiredWarranty.length > 0 && !activeFilter.type && (
               <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center gap-2 text-xs text-red-500 font-medium">
-                <div className="w-5 h-5 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+                <div className="w-5 h-5 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
                   <AlertTriangle size={11} className="text-red-500" />
                 </div>
                 {data.expiredWarranty.length} ativo{data.expiredWarranty.length > 1 ? 's' : ''} com garantia vencida
@@ -507,7 +609,7 @@ export default function Dashboard() {
 
           <div className="p-4">
             {displayRecent.length === 0 ? (
-              <p className="text-center text-sm text-slate-400 py-10">
+              <p className="text-center text-sm text-slate-400 dark:text-slate-500 py-10">
                 {activeFilter.type ? 'Nenhuma manutenção para este filtro' : 'Nenhuma manutenção registrada'}
               </p>
             ) : (
@@ -542,6 +644,35 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* ── Próximas Manutenções Preventivas ── */}
+      {proximasData.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-slate-50 dark:border-slate-700 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${hasManutAlert ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-blue-50 dark:bg-blue-900/30'}`}>
+                <Clock size={15} className={hasManutAlert ? 'text-orange-500' : 'text-blue-500'} />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Manutenções Preventivas</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                  {atrasadasCount > 0 && <span className="text-red-500 font-medium">{atrasadasCount} atrasada{atrasadasCount > 1 ? 's' : ''}</span>}
+                  {atrasadasCount > 0 && urgentesCount > 0 && <span className="text-slate-300 mx-1">·</span>}
+                  {urgentesCount > 0 && <span className="text-amber-500 font-medium">{urgentesCount} urgente{urgentesCount > 1 ? 's' : ''}</span>}
+                  {!hasManutAlert && 'Agendamentos com base nos períodos cadastrados'}
+                </p>
+              </div>
+            </div>
+            <Link to="/manutencoes" className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors">
+              Ver calendário <ChevronRight size={12} />
+            </Link>
+          </div>
+          <div className="p-4">
+            <ProximasManutencoes data={proximasData} />
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
