@@ -115,7 +115,7 @@ export default function Assets() {
     let list = assets.filter(a => {
       if (!showDescartados && descartadoId && a.status === descartadoId && filterStatus !== descartadoId) return false
       const q = search.toLowerCase()
-      const matchesSearch = !q || [a.name, a.serialNumber, a.assignedTo, a.brand, a.model]
+      const matchesSearch = !q || [a.name, a.serialNumber, a.assignedTo, a.brand, a.model, a.department]
         .some(v => v?.toLowerCase().includes(q))
       const matchesCat = !filterCategory || a.category === filterCategory
       const matchesStatus = !filterStatus || a.status === filterStatus
