@@ -37,7 +37,7 @@ export default function Responsaveis() {
       <CrudTable
         title="Responsáveis"
         subtitle="Lista completa de colaboradores e contatos"
-        items={responsaveis.items}
+        items={[...responsaveis.items].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'))}
         columns={columns}
         formFields={formFields}
         emptyForm={{ nome: '', setor: '' }}
