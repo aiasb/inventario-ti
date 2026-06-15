@@ -32,10 +32,11 @@ export default function CustomSelect({
   const btnRef   = useRef(null)
   const inputRef = useRef(null)
 
-  // Focus search input whenever dropdown opens
+  // Focus search input whenever dropdown opens — skip on Android to avoid keyboard auto-opening
   useEffect(() => {
     if (open && searchable) {
-      setTimeout(() => inputRef.current?.focus(), 30)
+      const isAndroid = /android/i.test(navigator.userAgent)
+      if (!isAndroid) setTimeout(() => inputRef.current?.focus(), 30)
     }
     if (!open) setSearchTerm('')
   }, [open, searchable])

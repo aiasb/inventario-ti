@@ -191,6 +191,32 @@ async function initDb(pool) {
   await addCol('periodos_manutencao', 'descricao',   'NVARCHAR(500)')
   await addCol('usuarios',            'settings',    'NVARCHAR(MAX)')
   await addCol('ativos',              'discard_date','DATE')
+  await addCol('responsaveis',        'ldap_dn',           'NVARCHAR(500)')
+  await addCol('responsaveis',        'ldap_servidor_id',  'UNIQUEIDENTIFIER')
+
+  // Tabela de servidores LDAP
+  await pool.request().query(`
+    IF OBJECT_ID('ldap_servidores', 'U') IS NULL
+    CREATE TABLE ldap_servidores (
+      id               UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+      nome             NVARCHAR(255) NOT NULL,
+      host             NVARCHAR(255) NOT NULL,
+      porta            INT           NOT NULL DEFAULT 389,
+      usar_ssl         BIT           NOT NULL DEFAULT 0,
+      base_dn          NVARCHAR(500) NOT NULL,
+      bind_dn          NVARCHAR(500) NOT NULL,
+      bind_password    NVARCHAR(500) NOT NULL,
+      filtro           NVARCHAR(500) NOT NULL DEFAULT '(&(objectClass=user)(objectCategory=person))',
+      attr_nome        NVARCHAR(100) NOT NULL DEFAULT 'displayName',
+      attr_email       NVARCHAR(100) NOT NULL DEFAULT 'mail',
+      attr_setor       NVARCHAR(100) NOT NULL DEFAULT 'department',
+      attr_telefone    NVARCHAR(100) NOT NULL DEFAULT 'telephoneNumber',
+      sync_intervalo_h INT           NOT NULL DEFAULT 24,
+      ativo            BIT           NOT NULL DEFAULT 1,
+      last_sync        DATETIME2,
+      created_at       DATETIME2     NOT NULL DEFAULT GETDATE()
+    )
+  `)
 
   // dias era NOT NULL — tornar nullable para suportar manutenções não-periódicas
   await pool.request().query(`

@@ -21,6 +21,9 @@ app.use('/api/reports',     require('./routes/reports'))
 app.use('/api/admin',       require('./routes/admin'))
 app.use('/api/import',      require('./routes/import'))
 
+const ldapRouter = require('./routes/ldap')
+app.use('/api/ldap',        ldapRouter)
+
 // Master data — CRUD genérico
 app.use('/api/responsaveis',        createCrudRouter('responsaveis'))
 app.use('/api/setores',             createCrudRouter('setores'))
@@ -65,7 +68,10 @@ async function start() {
     }
   }
 
-  app.listen(PORT, () => console.log(`Backend rodando na porta ${PORT}`))
+  app.listen(PORT, () => {
+    console.log(`Backend rodando na porta ${PORT}`)
+    ldapRouter.startAutoSync()
+  })
 }
 
 start()
