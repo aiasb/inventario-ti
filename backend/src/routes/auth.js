@@ -137,4 +137,50 @@ router.patch('/password', requireAuth, async (req, res) => {
   }
 })
 
+// GET /api/auth/settings
+router.get('/settings', requireAuth, async (req, res) => {
+  try {
+    const pool = await getPool()
+    const { recordset } = await pool.request()
+      .input('id', sql.UniqueIdentifier, req.user.id)
+      .query('SELECT settings FROM usuarios WHERE id = @id')
+
+    if (!recordset[0]) return res.status(404).json({ error: 'Usuário não encontrado' })
+
+    let settings = {}
+    try { settings = JSON.parse(recordset[0].settings || '{}') } catch {}
+    res.json(settings)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// PATCH /api/auth/settings  (merge patch — preserves unrelated keys)
+router.patch('/settings', requireAuth, async (req, res) => {
+  try {
+    const patch = req.body
+    const pool = await getPool()
+
+    const { recordset } = await pool.request()
+      .input('id', sql.UniqueIdentifier, req.user.id)
+      .query('SELECT settings FROM usuarios WHERE id = @id')
+
+    if (!recordset[0]) return res.status(404).json({ error: 'Usuário não encontrado' })
+
+    let existing = {}
+    try { existing = JSON.parse(recordset[0].settings || '{}') } catch {}
+
+    const merged = { ...existing, ...patch }
+
+    await pool.request()
+      .input('id',       sql.UniqueIdentifier, req.user.id)
+      .input('settings', sql.NVarChar,         JSON.stringify(merged))
+      .query('UPDATE usuarios SET settings = @settings, updated_at = GETDATE() WHERE id = @id')
+
+    res.json(merged)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 module.exports = router

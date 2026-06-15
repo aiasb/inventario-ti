@@ -100,16 +100,29 @@ export function AuthProvider({ children }) {
     return updated
   }
 
-  async function sendPasswordReset(email) {
+  async function sendPasswordReset(email, password) {
     const result = await apiFetch('/api/admin/send-reset', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, ...(password ? { password } : {}) }),
     })
     return result // { tempPassword }
   }
 
   async function deleteUser(userId) {
     await apiFetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
+  }
+
+  // ─── Configurações do usuário (persistidas no banco) ─────────────────────
+
+  async function loadSettings() {
+    return apiFetch('/api/auth/settings')
+  }
+
+  async function saveSettings(patch) {
+    return apiFetch('/api/auth/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    })
   }
 
   return (
@@ -126,6 +139,8 @@ export function AuthProvider({ children }) {
       updateUserProfile,
       sendPasswordReset,
       deleteUser,
+      loadSettings,
+      saveSettings,
     }}>
       {children}
     </AuthContext.Provider>

@@ -60,6 +60,52 @@
   }
 }
 
+/* ─── React Grid Layout ────────────────────────────────────────────────────── */
+/* Allow vertical scroll on grid items when not actively dragging */
+.react-grid-item:not(.react-draggable-dragging) { touch-action: pan-y !important; }
+.reports-edit-mode .react-grid-item { touch-action: none !important; }
+
+.react-grid-item.react-grid-placeholder {
+  background: rgb(59 130 246 / 0.12);
+  border: 2px dashed rgb(59 130 246 / 0.4);
+  border-radius: 1rem;
+  z-index: 2;
+}
+/* Resize handle — hidden by default, shown only in edit mode */
+.react-resizable-handle { display: none !important; }
+.reports-edit-mode .react-resizable-handle {
+  display: block !important;
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  bottom: 5px;
+  right: 5px;
+  background: none;
+  cursor: se-resize;
+  z-index: 10;
+}
+/* Dots grip pattern */
+.reports-edit-mode .react-resizable-handle::before,
+.reports-edit-mode .react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #94a3b8;
+  border-radius: 50%;
+}
+.reports-edit-mode .react-resizable-handle::before { bottom: 8px; right: 2px; }
+.reports-edit-mode .react-resizable-handle::after  { bottom: 2px; right: 2px; box-shadow: -6px 0 0 #94a3b8, -6px -6px 0 #94a3b8, 0 -6px 0 #94a3b8; }
+html.dark .reports-edit-mode .react-resizable-handle::before,
+html.dark .reports-edit-mode .react-resizable-handle::after {
+  background: #475569;
+  box-shadow: none;
+}
+html.dark .reports-edit-mode .react-resizable-handle::after {
+  box-shadow: -6px 0 0 #475569, -6px -6px 0 #475569, 0 -6px 0 #475569;
+}
+.react-grid-item.react-draggable-dragging { z-index: 100; opacity: 0.85; }
+
 /* ─── Dark mode global overrides ──────────────────────────────────────────── */
 /* Written outside @layer so they win over Tailwind @layer utilities via the  */
 /* cascade (unlayered styles > layered). Specificity (0,2,1) > Tailwind (0,1,0) */

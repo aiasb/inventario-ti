@@ -75,8 +75,11 @@ router.delete('/users/:id', requireAuth, requireAdmin, async (req, res) => {
 // POST /api/admin/send-reset  — retorna senha temporária (sem e-mail)
 router.post('/send-reset', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { email } = req.body
-    const tempPass = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase()
+    const { email, password } = req.body
+    if (password !== undefined && password.length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' })
+    }
+    const tempPass = password || (Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase())
     const hash = await bcrypt.hash(tempPass, 12)
 
     const pool = await getPool()

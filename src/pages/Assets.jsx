@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import AssetModal from '../components/AssetModal'
 import AssetForm from '../components/AssetForm'
+import CustomSelect from '../components/CustomSelect'
 import { exportCSV as doExportCSV } from '../lib/exportCSV'
 
 function isoDatePart(str) {
@@ -98,14 +99,19 @@ export default function Assets() {
   )
   const [showExportMenu, setShowExportMenu] = useState(false)
 
+  const descartadoId = useMemo(
+    () => situacoes.items.find(s => s.nome?.toLowerCase() === 'descartado')?.id,
+    [situacoes.items]
+  )
+
   const descartadosCount = useMemo(
-    () => assets.filter(a => a.status === 'descartado').length,
-    [assets]
+    () => descartadoId ? assets.filter(a => a.status === descartadoId).length : 0,
+    [assets, descartadoId]
   )
 
   const filtered = useMemo(() => {
     let list = assets.filter(a => {
-      if (!showDescartados && a.status === 'descartado') return false
+      if (!showDescartados && descartadoId && a.status === descartadoId) return false
       const q = search.toLowerCase()
       const matchesSearch = !q || [a.name, a.serialNumber, a.assignedTo, a.brand, a.model]
         .some(v => v?.toLowerCase().includes(q))
@@ -129,7 +135,7 @@ export default function Assets() {
     })
 
     return list
-  }, [assets, search, filterCategory, filterStatus, filterDept, filterWarranty, sortField, sortDir, showDescartados])
+  }, [assets, search, filterCategory, filterStatus, filterDept, filterWarranty, sortField, sortDir, showDescartados, descartadoId])
 
   function handleSort(field) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -237,11 +243,31 @@ export default function Assets() {
             }`}
           >
             <Filter size={15} />
-            Filtros
+            {!isAndroid && 'Filtros'}
             {activeFilters > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded-full leading-none">{activeFilters}</span>
+              <span className="px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded-full leading-none">{activeFilters}</span>
             )}
           </button>
+
+          {descartadosCount > 0 && (
+            <button
+              onClick={() => setShowDescartados(v => !v)}
+              title={showDescartados ? 'Ocultar descartados' : `Mostrar descartados (${descartadosCount})`}
+              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors shrink-0 ${
+                showDescartados
+                  ? 'bg-zinc-100 dark:bg-zinc-800/60 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300'
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+              }`}
+            >
+              <Ban size={15} />
+              {!isAndroid && <span>{showDescartados ? 'Ocultar' : 'Descartados'}</span>}
+              {!showDescartados && (
+                <span className="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs rounded-full leading-none font-bold">
+                  {descartadosCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {!isAndroid && (
             <div className="flex rounded-xl border border-slate-200 overflow-hidden bg-white">
@@ -263,7 +289,7 @@ export default function Assets() {
           )}
 
           <div className="relative">
-            <div className="flex rounded-xl border border-slate-200 overflow-visible">
+            <div className="flex rounded-xl border border-slate-200 overflow-hidden">
               <button
                 onClick={exportCSV}
                 className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors"
@@ -309,7 +335,7 @@ export default function Assets() {
               className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium transition-colors"
             >
               <Plus size={16} />
-              Novo Ativo
+              {!isAndroid && 'Novo Ativo'}
             </button>
           )}
         </div>
@@ -317,64 +343,70 @@ export default function Assets() {
 
       {/* ── Filters panel ── */}
       {showFilters && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Categoria</label>
-              <select
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Categoria</label>
+              <CustomSelect
                 value={filterCategory}
-                onChange={e => setFilterCategory(e.target.value)}
-                className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 bg-white text-slate-700"
-              >
-                <option value="">Todas</option>
-                {categorias.items.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
+                onChange={setFilterCategory}
+                placeholder="Todas"
+                options={[
+                  { value: '', label: 'Todas' },
+                  ...categorias.items.map(c => ({ value: c.id, label: c.label })),
+                ]}
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</label>
-              <select
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</label>
+              <CustomSelect
                 value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
-                className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 bg-white text-slate-700"
-              >
-                <option value="">Todos</option>
-                {situacoes.items.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-              </select>
+                onChange={setFilterStatus}
+                placeholder="Todos"
+                options={[
+                  { value: '', label: 'Todos' },
+                  ...situacoes.items
+                    .filter(s => s.id !== descartadoId)
+                    .map(s => ({ value: s.id, label: s.nome })),
+                ]}
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Setor</label>
-              <select
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Setor</label>
+              <CustomSelect
                 value={filterDept}
-                onChange={e => setFilterDept(e.target.value)}
-                className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 bg-white text-slate-700"
-              >
-                <option value="">Todos</option>
-                {setores.items.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}
-              </select>
+                onChange={setFilterDept}
+                placeholder="Todos"
+                options={[
+                  { value: '', label: 'Todos' },
+                  ...setores.items.map(s => ({ value: s.nome, label: s.nome })),
+                ]}
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Garantia</label>
-              <select
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Garantia</label>
+              <CustomSelect
                 value={filterWarranty}
-                onChange={e => setFilterWarranty(e.target.value)}
-                className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 bg-white text-slate-700"
-              >
-                <option value="">Todas</option>
-                <option value="ativa">Ativa</option>
-                <option value="vencida">Vencida</option>
-                <option value="sem">Sem garantia</option>
-              </select>
+                onChange={setFilterWarranty}
+                placeholder="Todas"
+                options={[
+                  { value: '', label: 'Todas' },
+                  { value: 'ativa', label: 'Ativa' },
+                  { value: 'vencida', label: 'Vencida' },
+                  { value: 'sem', label: 'Sem garantia' },
+                ]}
+              />
             </div>
 
           </div>
 
           {activeFilters > 0 && (
-            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <p className="text-xs text-slate-400">
+            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 {activeFilters} filtro{activeFilters > 1 ? 's' : ''} ativo{activeFilters > 1 ? 's' : ''}
               </p>
               <button
@@ -388,25 +420,12 @@ export default function Assets() {
         </div>
       )}
 
-      {/* ── Count + toggle descartados ── */}
-      <div className="flex items-center justify-between">
+      {/* ── Count ── */}
+      <div className="flex items-center">
         <p className="text-sm text-slate-500">
           {filtered.length} {filtered.length === 1 ? 'ativo encontrado' : 'ativos encontrados'}
           {filtered.length !== assets.length && ` de ${assets.length}`}
         </p>
-        {descartadosCount > 0 && (
-          <button
-            onClick={() => setShowDescartados(v => !v)}
-            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-              showDescartados
-                ? 'bg-zinc-100 border-zinc-300 text-zinc-700'
-                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            <Ban size={13} />
-            {showDescartados ? 'Ocultar descartados' : `Mostrar descartados (${descartadosCount})`}
-          </button>
-        )}
       </div>
 
       {/* ── Table view ── */}

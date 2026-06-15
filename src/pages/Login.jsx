@@ -52,8 +52,12 @@ export default function Login() {
                          err.message?.toLowerCase().includes('failed')
 
       if (isFetchErr) {
-        setError('Não foi possível conectar ao servidor. Verifique a URL do servidor abaixo.')
-        setShowServerConfig(true)
+        if (isAndroid) {
+          setError('Não foi possível conectar ao servidor. Verifique a URL do servidor abaixo.')
+          setShowServerConfig(true)
+        } else {
+          setError('Não foi possível conectar ao servidor. Tente novamente mais tarde.')
+        }
       } else {
         const msgs = {
           'Email ou senha inválidos': 'E-mail ou senha incorretos.',
@@ -218,50 +222,52 @@ export default function Login() {
               </button>
             </p>
 
-            {/* ── Configuração do servidor ────────────────────────────────── */}
-            <div className="mt-5 pt-5 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setShowServerConfig(v => !v)}
-                className="flex items-center gap-2 text-xs text-slate-600 hover:text-slate-400 w-full justify-center transition-colors"
-              >
-                <Wifi size={12} />
-                <span>Configurar servidor</span>
-                <ChevronDown size={12} className={`transition-transform ${showServerConfig ? 'rotate-180' : ''}`} />
-              </button>
+            {/* ── Configuração do servidor (somente Android) ──────────────── */}
+            {isAndroid && (
+              <div className="mt-5 pt-5 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowServerConfig(v => !v)}
+                  className="flex items-center gap-2 text-xs text-slate-600 hover:text-slate-400 w-full justify-center transition-colors"
+                >
+                  <Wifi size={12} />
+                  <span>Configurar servidor</span>
+                  <ChevronDown size={12} className={`transition-transform ${showServerConfig ? 'rotate-180' : ''}`} />
+                </button>
 
-              {showServerConfig && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs text-slate-500 text-center">
-                    URL do servidor backend. No Android, use o IP da máquina na rede local.
-                  </p>
-                  <input
-                    type="url"
-                    value={serverInput}
-                    onChange={e => setServerInput(e.target.value)}
-                    placeholder="http://192.168.1.x"
-                    className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSaveServer}
-                    className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-xl transition-colors ${
-                      serverSaved
-                        ? 'bg-emerald-600/20 border border-emerald-600/30 text-emerald-400'
-                        : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
-                    }`}
-                  >
-                    {serverSaved ? <CheckCircle2 size={14} /> : <Wifi size={14} />}
-                    {serverSaved ? 'URL salva!' : 'Salvar URL do servidor'}
-                  </button>
-                  {serverSaved && (
+                {showServerConfig && (
+                  <div className="mt-3 space-y-2">
                     <p className="text-xs text-slate-500 text-center">
-                      Tente fazer login novamente.
+                      URL do servidor backend. Use o IP da máquina na rede local.
                     </p>
-                  )}
-                </div>
-              )}
-            </div>
+                    <input
+                      type="url"
+                      value={serverInput}
+                      onChange={e => setServerInput(e.target.value)}
+                      placeholder="http://192.168.1.x"
+                      className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveServer}
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-xl transition-colors ${
+                        serverSaved
+                          ? 'bg-emerald-600/20 border border-emerald-600/30 text-emerald-400'
+                          : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                      }`}
+                    >
+                      {serverSaved ? <CheckCircle2 size={14} /> : <Wifi size={14} />}
+                      {serverSaved ? 'URL salva!' : 'Salvar URL do servidor'}
+                    </button>
+                    {serverSaved && (
+                      <p className="text-xs text-slate-500 text-center">
+                        Tente fazer login novamente.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
           </div>
         </div>

@@ -189,6 +189,7 @@ async function initDb(pool) {
   await addCol('marcas',              'observacoes', 'NVARCHAR(MAX)')
   await addCol('periodos_manutencao', 'periodico',   'BIT')
   await addCol('periodos_manutencao', 'descricao',   'NVARCHAR(500)')
+  await addCol('usuarios',            'settings',    'NVARCHAR(MAX)')
 
   // dias era NOT NULL — tornar nullable para suportar manutenções não-periódicas
   await pool.request().query(`

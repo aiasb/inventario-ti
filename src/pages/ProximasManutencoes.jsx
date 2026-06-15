@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMasterData } from '../context/MasterDataContext'
 import { fetchProximasManutencoes } from '../lib/api'
+import CustomSelect from '../components/CustomSelect'
 import {
   Wrench, AlertTriangle, Clock, CheckCircle2, Search,
   CalendarX, CalendarCheck, Settings, ChevronRight, RefreshCw,
@@ -202,30 +203,30 @@ export default function ProximasManutencoes() {
           />
         </div>
 
-        <select
+        <CustomSelect
           value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-400 transition-colors"
-        >
-          <option value="todos">Todas as situações</option>
-          <option value="vencido_nunca">Vencidos / Nunca feitos</option>
-          <option value="nunca">Nunca realizado</option>
-          <option value="vencido">Vencido</option>
-          <option value="urgente">Urgente (≤ 30d)</option>
-          <option value="atencao">Atenção (≤ 90d)</option>
-          <option value="ok">Em dia</option>
-        </select>
+          onChange={setFilterStatus}
+          placeholder="Todas as situações"
+          options={[
+            { value: 'todos',        label: 'Todas as situações' },
+            { value: 'vencido_nunca',label: 'Vencidos / Nunca feitos' },
+            { value: 'nunca',        label: 'Nunca realizado' },
+            { value: 'vencido',      label: 'Vencido' },
+            { value: 'urgente',      label: 'Urgente (≤ 30d)' },
+            { value: 'atencao',      label: 'Atenção (≤ 90d)' },
+            { value: 'ok',           label: 'Em dia' },
+          ]}
+        />
 
-        <select
+        <CustomSelect
           value={filterTipo}
-          onChange={e => setFilterTipo(e.target.value)}
-          className="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-400 transition-colors"
-        >
-          <option value="todos">Todos os tipos</option>
-          {tiposDisponiveis.map(r => (
-            <option key={r.periodoId} value={r.periodoId}>{r.periodoTipo}</option>
-          ))}
-        </select>
+          onChange={setFilterTipo}
+          placeholder="Todos os tipos"
+          options={[
+            { value: 'todos', label: 'Todos os tipos' },
+            ...tiposDisponiveis.map(r => ({ value: r.periodoId, label: r.periodoTipo })),
+          ]}
+        />
       </div>
 
       {/* Table */}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Users, Shield, Mail, Edit2, Loader2, Search, X, Save, AlertCircle, CheckCircle2, Lock, Database, Trash2, Monitor, RotateCcw, Paintbrush, BellRing, ShieldOff, Wrench, Clock, TriangleAlert, Wifi } from 'lucide-react'
+import { Users, Shield, Edit2, Loader2, Search, X, Save, AlertCircle, CheckCircle2, Lock, Database, Trash2, Monitor, RotateCcw, Paintbrush, BellRing, ShieldOff, Wrench, Clock, TriangleAlert, Wifi, Eye, EyeOff, Copy, KeyRound } from 'lucide-react'
 import logoImg from '../assets/logo-cacu.png'
 import CadastrosBase from './Cadastros'
 import { useBranding, DEFAULTS } from '../context/BrandingContext'
@@ -506,10 +506,18 @@ export default function Settings() {
   // Tabs State
   const [activeTab, setActiveTab] = useState('usuarios') // 'usuarios' | 'cadastros'
   
-  // Modal State
+  // Modal State — edição de permissões
   const [editingUser, setEditingUser] = useState(null)
   const [editForm, setEditForm] = useState({ role: 'visualizador', is_active: true })
   const [savingEdit, setSavingEdit] = useState(false)
+
+  // Modal State — reset de senha
+  const [resetPassUser, setResetPassUser] = useState(null)
+  const [resetPassInput, setResetPassInput] = useState('')
+  const [resetPassShow, setResetPassShow] = useState(false)
+  const [resetPassSaving, setResetPassSaving] = useState(false)
+  const [resetPassResult, setResetPassResult] = useState(null)
+  const [resetPassCopied, setResetPassCopied] = useState(false)
 
   const isAdmin = currentUserProfile?.role === 'admin'
   const { isAndroid } = usePlatform()
@@ -530,14 +538,26 @@ export default function Settings() {
     }
   }
 
-  async function handleResetPassword(email) {
-    if (!window.confirm(`Enviar e-mail de redefinição de senha para ${email}?`)) return
-    
+  function openResetPassModal(user) {
+    setResetPassUser(user)
+    setResetPassInput('')
+    setResetPassShow(false)
+    setResetPassSaving(false)
+    setResetPassResult(null)
+    setResetPassCopied(false)
+  }
+
+  async function handleResetPassSubmit(e) {
+    e.preventDefault()
+    setResetPassSaving(true)
     try {
-      await sendPasswordReset(email)
-      setAlertMsg({ type: 'success', msg: `E-mail de recuperação enviado para ${email}` })
+      const result = await sendPasswordReset(resetPassUser.email, resetPassInput || undefined)
+      setResetPassResult(result.tempPassword)
     } catch (err) {
-      setAlertMsg({ type: 'error', msg: 'Erro ao enviar e-mail: ' + err.message })
+      setAlertMsg({ type: 'error', msg: 'Erro ao redefinir senha: ' + err.message })
+      setResetPassUser(null)
+    } finally {
+      setResetPassSaving(false)
     }
   }
 
@@ -762,10 +782,11 @@ export default function Settings() {
                       </div>
                       {/* Actions */}
                       <div className="flex items-center gap-1 shrink-0">
-                        {(isAdmin || isSelf) && (
-                          <button onClick={() => handleResetPassword(user.email)}
-                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors">
-                            <Mail size={16} />
+                        {isAdmin && (
+                          <button onClick={() => openResetPassModal(user)}
+                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl transition-colors"
+                            title="Redefinir senha">
+                            <KeyRound size={16} />
                           </button>
                         )}
                         {isAdmin && (
@@ -878,10 +899,11 @@ export default function Settings() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-end gap-2">
-                              {(isAdmin || isSelf) && (
-                                <button onClick={() => handleResetPassword(user.email)}
-                                  className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
-                                  <Mail size={16} />
+                              {isAdmin && (
+                                <button onClick={() => openResetPassModal(user)}
+                                  className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                                  title="Redefinir senha">
+                                  <KeyRound size={16} />
                                 </button>
                               )}
                               {isAdmin && (
@@ -998,6 +1020,115 @@ export default function Settings() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reset de Senha Modal */}
+      {resetPassUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !resetPassSaving && setResetPassUser(null)} />
+          <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex items-center gap-2">
+                <KeyRound size={16} className="text-amber-500" />
+                <h3 className="font-semibold text-slate-800 dark:text-slate-100">Redefinir Senha</h3>
+              </div>
+              {!resetPassSaving && (
+                <button onClick={() => setResetPassUser(null)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition-colors">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {resetPassResult ? (
+              <div className="p-5 space-y-4">
+                <div className="flex items-center gap-2.5 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40 rounded-xl">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Senha redefinida com sucesso!</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Senha temporária</p>
+                  <div className="flex gap-2">
+                    <code className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono font-bold text-slate-800 dark:text-slate-100 select-all tracking-wider">
+                      {resetPassResult}
+                    </code>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(resetPassResult); setResetPassCopied(true) }}
+                      className={`flex items-center justify-center w-10 rounded-xl border transition-colors ${resetPassCopied ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-600 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                      title="Copiar senha"
+                    >
+                      {resetPassCopied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                    Compartilhe esta senha com <span className="font-medium text-slate-600 dark:text-slate-300">{resetPassUser.full_name || resetPassUser.nome}</span>. O usuário poderá alterá-la no perfil.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setResetPassUser(null)}
+                  className="w-full py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPassSubmit} className="p-5 space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{resetPassUser.full_name || resetPassUser.nome}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{resetPassUser.email}</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
+                    Nova senha temporária
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={resetPassShow ? 'text' : 'password'}
+                      value={resetPassInput}
+                      onChange={e => setResetPassInput(e.target.value)}
+                      placeholder="Deixe em branco para gerar automaticamente"
+                      className="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-xl px-4 pr-10 py-2.5 text-sm focus:outline-none focus:border-blue-400 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setResetPassShow(v => !v)}
+                      tabIndex={-1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    >
+                      {resetPassShow ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  {resetPassInput && resetPassInput.length < 6 && (
+                    <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
+                      <AlertCircle size={11} /> Mínimo 6 caracteres
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                    Deixe vazio para gerar uma senha aleatória segura.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setResetPassUser(null)}
+                    className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetPassSaving || (resetPassInput.length > 0 && resetPassInput.length < 6)}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white text-sm font-medium rounded-xl transition-colors"
+                  >
+                    {resetPassSaving ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />}
+                    {resetPassSaving ? 'Salvando...' : 'Redefinir Senha'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
