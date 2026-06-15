@@ -1,0 +1,52 @@
+services:
+  sqlserver:
+    image: ghcr.io/aiasb/inventario-ti-database:latest
+    container_name: inventario-sqlserver
+    user: root
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "${SA_PASSWORD:-Inventario@2024}"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./database/inventario_ti.bak:/var/opt/mssql/backup/inventario_ti.bak:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P \"${SA_PASSWORD:-Inventario@2024}\" -Q 'SELECT 1' -C -N 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/aiasb/inventario-ti-backend:latest
+    container_name: inventario-backend
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: sqlserver
+      DB_USER: sa
+      DB_PASSWORD: "${SA_PASSWORD:-Inventario@2024}"
+      DB_NAME: inventario_ti
+      JWT_SECRET: "${JWT_SECRET:-inventario_jwt_secret_2024_troque_em_producao}"
+      PORT: "3001"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost}"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/aiasb/inventario-ti-frontend:latest
+    container_name: inventario-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
