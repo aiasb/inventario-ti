@@ -31,22 +31,22 @@ export default function Sidebar() {
   function activeClass({ isActive }) {
     return `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
       collapsed ? 'justify-center' : ''
-    } ${isActive ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`
+    } ${isActive ? 'text-white' : 'text-violet-300 hover:text-white hover:bg-[#211452]'}`
   }
 
   return (
     <aside
-      className={`relative flex flex-col bg-slate-900 text-white transition-all duration-300 ${
+      className={`relative flex flex-col bg-[#070414] text-white transition-all duration-300 ${
         collapsed ? 'w-16' : 'w-64'
       } shrink-0`}
     >
       {/* Logo / Brand */}
-      <div className={`flex items-center gap-3 px-4 py-5 border-b border-slate-700/60 ${collapsed ? 'justify-center' : ''}`}>
+      <div className={`flex items-center gap-3 px-4 py-5 border-b border-[#281a5e]/70 ${collapsed ? 'justify-center' : ''}`}>
         <img src={logoImg} alt="Logo" className="h-9 w-auto shrink-0" />
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white leading-tight truncate">{companyName}</p>
-            <p className="text-xs text-slate-400 truncate">{companySubtitle}</p>
+            <p className="text-xs text-violet-400 truncate">{companySubtitle}</p>
           </div>
         )}
       </div>
@@ -70,7 +70,7 @@ export default function Sidebar() {
 
       {/* Footer: Settings (admin only) */}
       {isAdmin && (
-        <div className="p-2 border-t border-slate-700/60">
+        <div className="p-2 border-t border-[#281a5e]/70">
           <NavLink
             to="/settings"
             className={activeClass}
@@ -86,7 +86,7 @@ export default function Sidebar() {
       {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-6 z-10 flex items-center justify-center w-6 h-6 rounded-full bg-slate-700 border border-slate-600 text-slate-300 hover:text-white hover:bg-slate-600 transition-colors"
+        className="absolute -right-3 top-6 z-10 flex items-center justify-center w-6 h-6 rounded-full bg-[#211452] border border-[#3730a3] text-violet-300 hover:text-white hover:bg-[#3730a3] transition-colors"
       >
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>

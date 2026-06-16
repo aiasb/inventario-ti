@@ -13,7 +13,8 @@ import {
 } from 'lucide-react'
 import { apiFetch } from '../lib/api-client'
 
-const PALETTE = ['#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#06b6d4', '#f59e0b', '#ef4444', '#64748b']
+const PALETTE_LIGHT = ['#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#06b6d4', '#f59e0b', '#ef4444', '#64748b']
+const PALETTE_DARK  = ['#06d6f0', '#f72585', '#7b2fff', '#0ffe9d', '#ffd60a', '#ff6b35', '#4cc9f0', '#bc5090']
 
 function TooltipContent({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -126,6 +127,7 @@ export default function Dashboard() {
   const { assets } = useAssets()
   const { categorias, situacoes } = useMasterData()
   const { isDark } = useTheme()
+  const PALETTE = isDark ? PALETTE_DARK : PALETTE_LIGHT
   const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState({ type: null, value: null })
   const [proximasData, setProximasData] = useState([])

@@ -67,8 +67,10 @@ const DEFAULT_LAYOUTS = {
   xxs: makeStackLayout(2),
 }
 
-const PALETTE = ['#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#06b6d4', '#f59e0b', '#ef4444', '#64748b']
-const WARRANTY_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#94a3b8']
+const PALETTE_LIGHT = ['#3b82f6', '#10b981', '#8b5cf6', '#f97316', '#06b6d4', '#f59e0b', '#ef4444', '#64748b']
+const PALETTE_DARK  = ['#06d6f0', '#f72585', '#7b2fff', '#0ffe9d', '#ffd60a', '#ff6b35', '#4cc9f0', '#bc5090']
+const WARRANTY_COLORS_LIGHT = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#94a3b8']
+const WARRANTY_COLORS_DARK  = ['#f72585', '#ff6b35', '#ffd60a', '#0ffe9d', '#7b2fff']
 
 function normStr(s) { return (s ?? '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '') }
 
@@ -234,6 +236,8 @@ export default function Reports() {
   const { categorias, situacoes, setores, periodosManutencao } = useMasterData()
   const { assets, loading } = useAssets()
   const { isDark } = useTheme()
+  const PALETTE = isDark ? PALETTE_DARK : PALETTE_LIGHT
+  const WARRANTY_COLORS = isDark ? WARRANTY_COLORS_DARK : WARRANTY_COLORS_LIGHT
   const { loadSettings, saveSettings } = useAuth()
   const { isAndroid } = usePlatform()
   const chartsRef = useRef(null)
@@ -531,20 +535,12 @@ export default function Reports() {
       const margin      = 10
       const usableW     = pageW - margin * 2
       const pixPerMm    = actualW / usableW
-      const date        = new Date().toLocaleDateString('pt-BR')
-
-      pdf.setFontSize(13)
-      pdf.setTextColor(30, 41, 59)
-      pdf.text('Relatórios e Análises — Inventário de TI', margin, margin + 6)
-      pdf.setFontSize(8)
-      pdf.setTextColor(100, 116, 139)
-      pdf.text(`Gerado em ${date}${hasFilters ? ' · Filtros ativos' : ''}`, margin, margin + 12)
 
       // Paginate
       let srcYpx = 0
       let firstPage = true
       while (srcYpx < actualH) {
-        const yMm      = firstPage ? margin + 18 : margin
+        const yMm      = firstPage ? margin : margin
         const availHmm = pageH - yMm - margin
         const sliceHpx = Math.min(Math.floor(availHmm * pixPerMm), actualH - srcYpx)
         if (sliceHpx <= 0) break

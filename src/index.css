@@ -61,7 +61,6 @@
 }
 
 /* ─── React Grid Layout ────────────────────────────────────────────────────── */
-/* Allow vertical scroll on grid items when not actively dragging */
 .react-grid-item:not(.react-draggable-dragging) { touch-action: pan-y !important; }
 .reports-edit-mode .react-grid-item { touch-action: none !important; }
 
@@ -71,7 +70,6 @@
   border-radius: 1rem;
   z-index: 2;
 }
-/* Resize handle — hidden by default, shown only in edit mode */
 .react-resizable-handle { display: none !important; }
 .reports-edit-mode .react-resizable-handle {
   display: block !important;
@@ -84,7 +82,6 @@
   cursor: se-resize;
   z-index: 10;
 }
-/* Dots grip pattern */
 .reports-edit-mode .react-resizable-handle::before,
 .reports-edit-mode .react-resizable-handle::after {
   content: '';
@@ -96,74 +93,130 @@
 }
 .reports-edit-mode .react-resizable-handle::before { bottom: 8px; right: 2px; }
 .reports-edit-mode .react-resizable-handle::after  { bottom: 2px; right: 2px; box-shadow: -6px 0 0 #94a3b8, -6px -6px 0 #94a3b8, 0 -6px 0 #94a3b8; }
-html.dark .reports-edit-mode .react-resizable-handle::before,
-html.dark .reports-edit-mode .react-resizable-handle::after {
-  background: #475569;
-  box-shadow: none;
-}
-html.dark .reports-edit-mode .react-resizable-handle::after {
-  box-shadow: -6px 0 0 #475569, -6px -6px 0 #475569, 0 -6px 0 #475569;
-}
 .react-grid-item.react-draggable-dragging { z-index: 100; opacity: 0.85; }
 
-/* ─── Dark mode global overrides ──────────────────────────────────────────── */
-/* Written outside @layer so they win over Tailwind @layer utilities via the  */
-/* cascade (unlayered styles > layered). Specificity (0,2,1) > Tailwind (0,1,0) */
+/* ═══════════════════════════════════════════════════════════════════════════
+   DARK MODE — Neon Tech Theme
+   Paleta: roxo profundo + acentos ciano/pink neon
+   Cores base:
+     Fundo deep:  #070414
+     Card:        #10082b
+     Surface 2:   #180e3b
+     Hover:       #211452
+     Borda:       #281a5e / #3730a3
+     Texto:       #f0e6ff / #c4b5fd / #9b8fc7
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 html.dark {
   color-scheme: dark;
 }
 
-/* Surfaces — white/light → dark card */
-html.dark .bg-white           { background-color: #1e293b; }
-html.dark .bg-slate-50        { background-color: #0f172a; }
-html.dark .bg-slate-100       { background-color: #334155; }
-html.dark .bg-slate-200       { background-color: #334155; }
-html.dark .bg-slate-50\/60    { background-color: rgb(15 23 42 / 0.6); }
-html.dark .bg-slate-50\/40    { background-color: rgb(15 23 42 / 0.4); }
+/* ── Fundo geral (bg-slate-950 no Layout.jsx) ─────────────────────────── */
+html.dark .bg-slate-950      { background-color: #070414; }
 
-/* Text — invert slate scale so light bg text becomes readable on dark */
-html.dark .text-slate-800     { color: #f1f5f9; }
-html.dark .text-slate-700     { color: #e2e8f0; }
-html.dark .text-slate-600     { color: #cbd5e1; }
-html.dark .text-slate-500     { color: #94a3b8; }
+/* ── Surfaces — claro → índigo escuro ──────────────────────────────────── */
+html.dark .bg-white          { background-color: #10082b; }
+html.dark .bg-slate-50       { background-color: #0d0826; }
+html.dark .bg-slate-100      { background-color: #1a1040; }
+html.dark .bg-slate-200      { background-color: #211452; }
+html.dark .bg-slate-50\/60   { background-color: rgb(13 8 38 / 0.6); }
+html.dark .bg-slate-50\/40   { background-color: rgb(13 8 38 / 0.4); }
 
-/* Borders */
-html.dark .border-slate-100   { border-color: #334155; }
-html.dark .border-slate-200   { border-color: #475569; }
+/* dark: prefixed surfaces */
+html.dark .dark\:bg-slate-950      { background-color: #070414; }
+html.dark .dark\:bg-slate-900      { background-color: #0d0826; }
+html.dark .dark\:bg-slate-800      { background-color: #10082b; }
+html.dark .dark\:bg-slate-700      { background-color: #1a1040; }
+html.dark .dark\:bg-slate-800\/80  { background-color: rgb(16 8 43 / 0.8); }
+html.dark .dark\:bg-slate-800\/40  { background-color: rgb(16 8 43 / 0.4); }
+html.dark .dark\:bg-slate-700\/40  { background-color: rgb(26 16 64 / 0.4); }
+html.dark .dark\:bg-slate-700\/30  { background-color: rgb(26 16 64 / 0.3); }
+html.dark .dark\:bg-slate-700\/50  { background-color: rgb(26 16 64 / 0.5); }
+html.dark .dark\:bg-slate-900\/60  { background-color: rgb(13 8 38 / 0.6); }
 
-/* Divide lines (divide-y, divide-x) */
-html.dark [class*="divide-slate"] > * + * { border-color: #334155; }
+/* ── Text ───────────────────────────────────────────────────────────────── */
+html.dark .text-slate-800     { color: #f0e6ff; }
+html.dark .text-slate-700     { color: #e5d8ff; }
+html.dark .text-slate-600     { color: #c4b5fd; }
+html.dark .text-slate-500     { color: #9b8fc7; }
 
-/* Shadows — stronger in dark mode for depth perception */
-html.dark .shadow-sm   { box-shadow: 0 1px 3px rgb(0 0 0 / 0.5); }
-html.dark .shadow-md   { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.5); }
-html.dark .shadow-lg   { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5); }
-html.dark .shadow-xl   { box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.6); }
+html.dark .dark\:text-slate-100    { color: #f0e6ff; }
+html.dark .dark\:text-slate-200    { color: #e5d8ff; }
+html.dark .dark\:text-slate-300    { color: #c4b5fd; }
+html.dark .dark\:text-slate-400    { color: #9b8fc7; }
+html.dark .dark\:text-slate-500    { color: #7c6fcd; }
 
-/* Hover states for light-surface elements */
-html.dark .hover\:bg-slate-50:hover  { background-color: #334155; }
-html.dark .hover\:bg-slate-100:hover { background-color: #334155; }
-html.dark .hover\:bg-white:hover     { background-color: #334155; }
+/* ── Borders ────────────────────────────────────────────────────────────── */
+html.dark .border-slate-100        { border-color: #281a5e; }
+html.dark .border-slate-200        { border-color: #3730a3; }
 
-/* Focus rings on inputs */
-html.dark .focus\:border-blue-400:focus { border-color: #60a5fa; }
+html.dark .dark\:border-slate-700     { border-color: #281a5e; }
+html.dark .dark\:border-slate-600     { border-color: #3730a3; }
+html.dark .dark\:border-slate-700\/60 { border-color: rgb(40 26 94 / 0.6); }
+html.dark .dark\:border-slate-700\/50 { border-color: rgb(40 26 94 / 0.5); }
 
-/* Form inputs — apply dark background to all inputs in dark mode */
+/* ── Divide lines ───────────────────────────────────────────────────────── */
+html.dark [class*="divide-slate"] > * + * { border-color: #281a5e; }
+
+/* ── Hover states ───────────────────────────────────────────────────────── */
+html.dark .hover\:bg-slate-50:hover   { background-color: #180e3b; }
+html.dark .hover\:bg-slate-100:hover  { background-color: #211452; }
+html.dark .hover\:bg-white:hover      { background-color: #180e3b; }
+
+html.dark .dark\:hover\:bg-slate-700:hover      { background-color: #1a1040; }
+html.dark .dark\:hover\:bg-slate-700\/30:hover  { background-color: rgb(26 16 64 / 0.3); }
+html.dark .dark\:hover\:bg-slate-700\/50:hover  { background-color: rgb(26 16 64 / 0.5); }
+html.dark .dark\:hover\:bg-slate-700\/60:hover  { background-color: rgb(26 16 64 / 0.6); }
+html.dark .dark\:hover\:bg-violet-900\/40:hover { background-color: rgb(76 29 149 / 0.4); }
+
+/* ── Sombras com brilho neon sutil ─────────────────────────────────────── */
+html.dark .shadow-sm  { box-shadow: 0 1px 3px rgb(0 0 0 / 0.7), 0 0 10px rgb(88 28 220 / 0.08); }
+html.dark .shadow-md  { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.6), 0 0 16px rgb(88 28 220 / 0.12); }
+html.dark .shadow-lg  { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 0 24px rgb(88 28 220 / 0.15); }
+html.dark .shadow-xl  { box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 0 35px rgb(88 28 220 / 0.18); }
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
 html.dark input:not([type=checkbox]):not([type=radio]):not([type=range]),
 html.dark select,
 html.dark textarea {
-  background-color: #0f172a;
-  color: #f1f5f9;
-  border-color: #334155;
+  background-color: #0d0826;
+  color: #f0e6ff;
+  border-color: #281a5e;
 }
 
-html.dark ::placeholder { color: #64748b; }
+html.dark ::placeholder { color: #5b4f8a; }
 
-/* Dark scrollbar */
+/* ── Focus ring neon ciano ──────────────────────────────────────────────── */
+html.dark .focus\:border-blue-400:focus  { border-color: #06d6f0; }
+html.dark .dark\:focus\:border-blue-500:focus { border-color: #06d6f0; }
+
+/* ── Acentos azul → ciano neon ──────────────────────────────────────────── */
+html.dark .dark\:text-blue-400   { color: #06d6f0; }
+html.dark .dark\:border-blue-500 { border-color: #06d6f0; }
+html.dark .dark\:border-blue-900\/30 { border-color: rgb(6 214 240 / 0.2); }
+html.dark .dark\:bg-blue-900\/20 { background-color: rgb(6 214 240 / 0.08); }
+html.dark .dark\:bg-blue-900\/30 { background-color: rgb(6 214 240 / 0.12); }
+
+/* ── React Grid placeholder neon ────────────────────────────────────────── */
+html.dark .react-grid-item.react-grid-placeholder {
+  background: rgb(6 214 240 / 0.08);
+  border-color: rgb(6 214 240 / 0.35);
+}
+
+/* ── Resize handle dots ─────────────────────────────────────────────────── */
+html.dark .reports-edit-mode .react-resizable-handle::before,
+html.dark .reports-edit-mode .react-resizable-handle::after {
+  background: #3730a3;
+  box-shadow: none;
+}
+html.dark .reports-edit-mode .react-resizable-handle::after {
+  box-shadow: -6px 0 0 #3730a3, -6px -6px 0 #3730a3, 0 -6px 0 #3730a3;
+}
+
+/* ── Scrollbar neon ─────────────────────────────────────────────────────── */
 html.dark .scrollbar-thin {
-  scrollbar-color: #475569 transparent;
+  scrollbar-color: #3730a3 transparent;
 }
 html.dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: #475569;
+  background-color: #3730a3;
 }
