@@ -443,15 +443,15 @@ export default function Assets() {
       {/* ── Table view ── */}
       {effectiveView === 'table' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+            <table className="w-full text-sm" style={{ minWidth: 960 }}>
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   {TABLE_COLS.map(col => (
                     <th
                       key={col.field}
                       onClick={() => handleSort(col.field)}
-                      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-700 select-none whitespace-nowrap"
+                      className="text-left px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:text-slate-700 select-none whitespace-nowrap"
                     >
                       <div className="flex items-center gap-1">
                         {col.label}
@@ -459,7 +459,7 @@ export default function Assets() {
                       </div>
                     </th>
                   ))}
-                  <th className="sticky right-0 bg-slate-50/60 px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right after:absolute after:inset-y-0 after:left-0 after:w-px after:bg-slate-200">Ações</th>
+                  <th className="px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -471,26 +471,30 @@ export default function Assets() {
                   </tr>
                 ) : filtered.map(asset => (
                   <tr key={asset.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <p className="font-medium text-slate-800">{asset.name}</p>
-                      <p className="text-xs text-slate-400">{asset.brand} {asset.model}</p>
+                    <td className="px-3 py-2.5 max-w-[180px]">
+                      <p className="font-medium text-slate-800 truncate" title={asset.name}>{asset.name}</p>
+                      <p className="text-xs text-slate-400 truncate">{asset.brand} {asset.model}</p>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">{asset.serialNumber || '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5 font-mono text-xs text-slate-500 whitespace-nowrap">{asset.serialNumber || '—'}</td>
+                    <td className="px-3 py-2.5">
                       <CategoryBadge category={asset.category} categorias={categorias.items} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5">
                       <StatusBadge statusId={asset.status} situacoesItems={situacoes.items} />
                     </td>
-                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{asset.department || '—'}</td>
-                    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{asset.assignedTo || '—'}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{asset.memory || '—'}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{asset.storage || '—'}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{fmtDate(asset.purchaseDate)}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5 text-slate-600 max-w-[130px]">
+                      <span className="block truncate" title={asset.department || ''}>{asset.department || '—'}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-600 max-w-[140px]">
+                      <span className="block truncate" title={asset.assignedTo || ''}>{asset.assignedTo || '—'}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-500 text-xs whitespace-nowrap">{asset.memory || '—'}</td>
+                    <td className="px-3 py-2.5 text-slate-500 text-xs whitespace-nowrap">{asset.storage || '—'}</td>
+                    <td className="px-3 py-2.5 text-slate-500 text-xs whitespace-nowrap">{fmtDate(asset.purchaseDate)}</td>
+                    <td className="px-3 py-2.5">
                       <WarrantyBadge date={asset.warrantyExpiry} />
                     </td>
-                    <td className="sticky right-0 bg-white px-4 py-3 after:absolute after:inset-y-0 after:left-0 after:w-px after:bg-slate-100">
+                    <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => setViewingAsset(asset)}
