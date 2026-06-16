@@ -459,7 +459,7 @@ export default function Assets() {
                       </div>
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Ações</th>
+                  <th className="sticky right-0 bg-slate-50/60 px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right after:absolute after:inset-y-0 after:left-0 after:w-px after:bg-slate-200">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -490,7 +490,7 @@ export default function Assets() {
                     <td className="px-4 py-3">
                       <WarrantyBadge date={asset.warrantyExpiry} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="sticky right-0 bg-white px-4 py-3 after:absolute after:inset-y-0 after:left-0 after:w-px after:bg-slate-100">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => setViewingAsset(asset)}
