@@ -5,7 +5,35 @@ const { v4: uuidv4 } = require('uuid')
 
 const router = express.Router()
 
+const COLUMN_TYPES = {
+  name:           sql.NVarChar,
+  category:       sql.NVarChar,
+  status:         sql.NVarChar,
+  serialNumber:   sql.NVarChar,
+  brand:          sql.NVarChar,
+  model:          sql.NVarChar,
+  department:     sql.NVarChar,
+  assignedTo:     sql.NVarChar,
+  memory:         sql.NVarChar,
+  storage:        sql.NVarChar,
+  purchaseDate:   sql.Date,
+  warrantyExpiry: sql.Date,
+  discardDate:    sql.Date,
+  location:       sql.NVarChar,
+  notes:          sql.NVarChar(sql.MAX),
+}
+
+const COLUMN_NAMES = {
+  name: 'name', category: 'category', status: 'status', serialNumber: 'serial_number',
+  brand: 'brand', model: 'model', department: 'department', assignedTo: 'assigned_to',
+  memory: 'memory', storage: 'storage', purchaseDate: 'purchase_date',
+  warrantyExpiry: 'warranty_expiry', discardDate: 'discard_date',
+  location: 'location', notes: 'notes',
+}
+
 // POST /api/import/ativos
+// Usa o número de série como chave de referência: se já existir um ativo com
+// o mesmo serial, atualiza os campos presentes na planilha; caso contrário, insere.
 router.post('/ativos', requireAuth, requireWrite, async (req, res) => {
   const { assets } = req.body
   if (!Array.isArray(assets) || assets.length === 0) {
@@ -13,19 +41,33 @@ router.post('/ativos', requireAuth, requireWrite, async (req, res) => {
   }
 
   const pool = await getPool()
-  const result = { inserted: 0, skipped: 0, errors: [] }
+  const result = { inserted: 0, updated: 0, errors: [] }
 
   for (const asset of assets) {
     try {
-      // Skip duplicates by serial_number
+      let existingId = null
       if (asset.serialNumber) {
         const { recordset } = await pool.request()
           .input('sn', sql.NVarChar, asset.serialNumber)
           .query('SELECT id FROM ativos WHERE serial_number = @sn')
-        if (recordset.length > 0) {
-          result.skipped++
-          continue
-        }
+        if (recordset.length > 0) existingId = recordset[0].id
+      }
+
+      if (existingId) {
+        const fields = Object.keys(asset).filter(k => COLUMN_NAMES[k] && asset[k] !== undefined && asset[k] !== null && asset[k] !== '')
+        if (fields.length === 0) continue
+
+        const request = pool.request().input('id', sql.UniqueIdentifier, existingId)
+        const setClauses = fields.map(key => {
+          const col = COLUMN_NAMES[key]
+          request.input(col, COLUMN_TYPES[key], asset[key])
+          return `${col} = @${col}`
+        })
+        setClauses.push('updated_at = GETDATE()')
+
+        await request.query(`UPDATE ativos SET ${setClauses.join(', ')} WHERE id = @id`)
+        result.updated++
+        continue
       }
 
       await pool.request()

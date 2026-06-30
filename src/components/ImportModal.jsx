@@ -213,7 +213,7 @@ export default function ImportModal({ onClose, onImported }) {
 
     try {
       const BATCH = 50
-      let totalInserted = 0, totalSkipped = 0
+      let totalInserted = 0, totalUpdated = 0
       const errors = []
 
       for (let i = 0; i < assets.length; i += BATCH) {
@@ -223,12 +223,12 @@ export default function ImportModal({ onClose, onImported }) {
           body: JSON.stringify({ assets: batch }),
         })
         totalInserted += res.inserted || 0
-        totalSkipped  += res.skipped  || 0
+        totalUpdated  += res.updated  || 0
         errors.push(...(res.errors || []))
         setProgress(Math.round(((i + batch.length) / assets.length) * 100))
       }
 
-      setResult({ inserted: totalInserted, skipped: totalSkipped, errors })
+      setResult({ inserted: totalInserted, updated: totalUpdated, errors })
       setStep('done')
       onImported?.()
     } catch (err) {
@@ -421,10 +421,10 @@ export default function ImportModal({ onClose, onImported }) {
                   <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{result.inserted}</p>
                   <p className="text-xs text-emerald-700 dark:text-emerald-500 font-medium mt-1">Importados</p>
                 </div>
-                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-center border border-amber-200 dark:border-amber-700/50">
-                  <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{result.skipped}</p>
-                  <p className="text-xs text-amber-700 dark:text-amber-500 font-medium mt-1">Ignorados</p>
-                  <p className="text-xs text-amber-600/60 dark:text-amber-600/60">serial duplicado</p>
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center border border-blue-200 dark:border-blue-700/50">
+                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{result.updated}</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-500 font-medium mt-1">Atualizados</p>
+                  <p className="text-xs text-blue-600/60 dark:text-blue-600/60">serial já existente</p>
                 </div>
                 <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-center border border-red-200 dark:border-red-700/50">
                   <p className="text-3xl font-bold text-red-600 dark:text-red-400">{result.errors.length}</p>
